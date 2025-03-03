@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Vulnerability;
+use App\Models\Project;
 
 class User extends Authenticatable
 {
@@ -44,5 +46,50 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function createdVulnerability()
+    {
+        return $this->hasMany(Vulnerability::class, 'created_by');
+    }
+
+    /**
+     * Get the vulnerabilities updated by the user.
+     */
+    public function updatedVulnerability()
+    {
+        return $this->hasMany(Vulnerability::class, 'updated_by');
+    }
+
+        /**
+     * Get the projects created by the user.
+     */
+    public function createdProject()
+    {
+        return $this->hasMany(Project::class, 'created_by');
+    }
+
+    /**
+     * Get the projects updated by the user.
+     */
+    public function updatedProject()
+    {
+        return $this->hasMany(Project::class, 'updated_by');
+    }
+
+    /**
+     * Get the clients created by the user.
+     */
+    public function createdClient()
+    {
+        return $this->hasMany(Client::class, 'created_by');
+    }
+
+    /**
+     * Get the clients updated by the user.
+     */
+    public function updatedClient()
+    {
+        return $this->hasMany(Client::class, 'updated_by');
     }
 }

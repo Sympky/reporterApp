@@ -2,8 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\ClientsController;
-use App\Http\Controllers\ProjectsController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\VulnerabilityController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -15,10 +16,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Client routes
-    Route::get('/clients/{client}', [ClientsController::class, 'index']);
+    Route::get('clients', [ClientController::class, 'index']);
 
     // Project routes
-    Route::resource('projects', ProjectsController::class);
+    Route::resource('projects', ProjectController::class);
+
+    // Vulnerability routes
+    Route::resource('vulnerabilities', VulnerabilityController::class);
 });
 
 require __DIR__.'/settings.php';
