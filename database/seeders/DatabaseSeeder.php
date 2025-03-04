@@ -26,13 +26,13 @@ class DatabaseSeeder extends Seeder
 
         // Create 30 clients, each with 30 projects
         Client::factory()
-            ->count(30)
+            ->count(10) 
             ->has(
                 Project::factory()
-                    ->count(30)
+                    ->count(rand(1, 3)) 
                     ->has(
                         Vulnerability::factory()
-                            ->count(rand(5, 10)) 
+                            ->count(rand(3, 5)) 
                     )
             )
             ->create();

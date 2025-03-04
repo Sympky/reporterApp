@@ -16,13 +16,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Client routes
-    Route::get('clients', [ClientController::class, 'index']);
+    Route::get('clients', [ClientController::class, 'index']); // List all clients
+
 
     // Project routes
     Route::resource('projects', ProjectController::class);
 
+    
     // Vulnerability routes
     Route::resource('vulnerabilities', VulnerabilityController::class);
+
+    // detailed project routes
+    Route::get('projects/{project}/vulnerabilities', [ProjectController::class, 'vulnerabilities']);
+  
 });
 
 require __DIR__.'/settings.php';

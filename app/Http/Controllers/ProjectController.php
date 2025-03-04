@@ -9,40 +9,38 @@ use Inertia\Inertia;
 
 class ProjectController extends Controller
 {
+    // List all projects for a specific client
     public function index(Client $client)
     {
          // Fetch all clients and return them as a JSON response
          return response()->json(Project::all());
     }
 
-    public function create(Client $client)
-    {
-
-    }
-
+    // Store a new project for a specific client
     public function store(Request $request, Client $client)
     {
-
+        $project = $client->projects()->create($request->all());
+        return response()->json($project, 201);
     }
 
-    public function show(Client $client, Project $project)
+    // Show a specific project
+    public function show(Project $project)
     {
-
+        return $project;
     }
 
-    public function edit(Client $client, Project $project)
+    // Update a specific project
+    public function update(Request $request, Project $project)
     {
-
+        $project->update($request->all());
+        return response()->json($project, 200);
     }
 
-    public function update(Request $request, Client $client, Project $project)
+    // Delete a specific project
+    public function destroy(Project $project)
     {
-
-    }
-
-    public function destroy(Client $client, Project $project)
-    {
-
+        $project->delete();
+        return response()->json(null, 204);
     }
 }
 
