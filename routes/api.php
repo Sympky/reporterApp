@@ -12,6 +12,12 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 
+Route::get('latest-clients', [ClientController::class, 'latestClients']);
+Route::get('latest-projects', [ProjectController::class, 'latestProjects']);
+Route::get('common-vulnerabilities', [VulnerabilityController::class, 'commonVulnerabilities']);
+
+
+
 // Clients API Routes
 Route::apiResource('clients', ClientController::class);
 
@@ -22,3 +28,5 @@ Route::apiResource('clients.projects', ProjectController::class)
 // Vulnerabilities API Routes
 Route::apiResource('projects.vulnerabilities', VulnerabilityController::class)
     ->shallow();
+
+

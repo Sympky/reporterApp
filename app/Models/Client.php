@@ -41,7 +41,7 @@ class Client extends Model
     /**
      * Get the projects for the client.
      */
-    public function project()
+    public function projects()
     {
         return $this->hasMany(Project::class, 'client_id');
     }

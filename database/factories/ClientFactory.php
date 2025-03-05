@@ -19,10 +19,29 @@ class ClientFactory extends Factory
         return [
             'name' => fake()->name(),
             'description' => fake()->realText(),
+            'emails' => json_encode(fake()->randomElements([
+                fake()->unique()->safeEmail(),
+                fake()->unique()->safeEmail(), 
+                fake()->unique()->safeEmail(),
+                fake()->unique()->safeEmail(),
+                fake()->unique()->safeEmail()
+            ], fake()->numberBetween(1, 3))),
+            'phone_numbers' => json_encode(fake()->randomElements([
+                fake()->phoneNumber(),
+                fake()->phoneNumber(),
+                fake()->phoneNumber()
+            ], fake()->numberBetween(1, 3))),
+            'addresses' => fake()->address(),
+            'website_urls' => fake()->url(),
+            'other_contact_info' => json_encode([
+                'skype' => fake()->userName(),
+                'telegram' => fake()->userName(),
+                'whatsapp' => fake()->phoneNumber()
+            ]),
             'created_by' => 1,
             'updated_by' => 1,
-            'created_at' => time(),
-            'updated_at' => time(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 }

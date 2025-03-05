@@ -26,7 +26,7 @@ class ClientController extends Controller
 
     public function show(Client $client)
     {
-
+        return response()->json($client);
     }
 
     public function edit(Client $client)
@@ -42,5 +42,11 @@ class ClientController extends Controller
     public function destroy(Client $client)
     {
 
+    }
+
+    public function latestClients()
+    {
+        $clients = Client::orderBy('created_at', 'desc')->take(5)->get();
+        return response()->json($clients);
     }
 }

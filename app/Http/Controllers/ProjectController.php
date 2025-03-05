@@ -12,8 +12,9 @@ class ProjectController extends Controller
     // List all projects for a specific client
     public function index(Client $client)
     {
-         // Fetch all clients and return them as a JSON response
-         return response()->json(Project::all());
+        // Fetch projects for the specified client
+        $projects = $client->projects;
+        return response()->json($projects);
     }
 
     // Store a new project for a specific client
@@ -41,6 +42,25 @@ class ProjectController extends Controller
     {
         $project->delete();
         return response()->json(null, 204);
+    }
+
+    public function latestProjects()
+    {
+        $projects = Project::with('client')->orderBy('created_at', 'desc')->take(10)->get();
+
+        // Map the projects to include client_name
+        $projectsWithClientNames = $projects->map(function ($project) {
+            return [
+                'id' => $project->id,
+                'client_name' => $project->client->name,
+                'name' => $project->name,
+                'status' => $project->status,
+                'due_date' => $project->due_date,
+                // Include other fields as needed
+            ];
+        });
+
+        return response()->json($projectsWithClientNames);
     }
 }
 

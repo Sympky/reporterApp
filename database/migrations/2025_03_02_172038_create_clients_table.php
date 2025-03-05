@@ -15,6 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->longText('description')->nullable();
+            $table->json('emails')->nullable();
+            $table->json('phone_numbers')->nullable();
+            $table->string('addresses')->nullable();
+            $table->string('website_urls')->nullable();
+            $table->json('other_contact_info')->nullable();
             $table->foreignId('created_by')->constrained('users');
             $table->foreignId('updated_by')->constrained('users');
             $table->timestamps();
