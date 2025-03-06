@@ -16,7 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Client routes
-    Route::get('clients', [ClientController::class, 'index']); // List all clients
+    Route::resource('clients', ClientController::class);
 
 
     // Project routes

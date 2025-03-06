@@ -4,9 +4,9 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { DataTable } from './data-table';
-import { columns, Client } from './columns';
-import { projectColumns, Project } from './projectColumns';
+import { DataTable } from '@/components/data-table';
+import { columns, Client } from '@/components/clientColumns';
+import { projectColumns, Project } from '@/components/projectColumns';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
