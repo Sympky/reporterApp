@@ -7,6 +7,7 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Vulnerability;
 
 class ProjectController extends Controller
 {
@@ -76,7 +77,59 @@ class ProjectController extends Controller
     // Show a specific project
     public function show(Project $project)
     {
-        return $project;
+        // Load the project with its client and vulnerabilities
+        $project->load('client');
+        
+        // Get vulnerabilities for this project
+        $vulnerabilities = $project->vulnerabilities()
+            ->where('is_template', false)
+            ->orderBy('severity', 'desc')
+            ->get()
+            ->map(function ($vulnerability) {
+                // Parse JSON fields
+                $evidence = json_decode($vulnerability->evidence, true) ?? [];
+                $tags = json_decode($vulnerability->tags, true) ?? [];
+                
+                return [
+                    'id' => $vulnerability->id,
+                    'project_id' => $vulnerability->project_id,
+                    'name' => $vulnerability->name,
+                    'description' => $vulnerability->description,
+                    'recommendations' => $vulnerability->recommendations,
+                    'impact' => $vulnerability->impact,
+                    'references' => $vulnerability->references,
+                    'affected_components' => $vulnerability->affected_components,
+                    'affected_resources' => $vulnerability->affected_resources,
+                    'tags' => $tags,
+                    'severity' => ucfirst(strtolower($vulnerability->severity)),
+                    'cvss' => $vulnerability->cvss ? (float)$vulnerability->cvss : null,
+                    'cve' => $vulnerability->cve,
+                    'likelihood_score' => ucfirst(strtolower($vulnerability->likelihood_score)),
+                    'remediation_score' => ucfirst(strtolower($vulnerability->remediation_score)),
+                    'impact_score' => ucfirst(strtolower($vulnerability->impact_score)),
+                    'status' => $vulnerability->status,
+                    'remediation_steps' => $vulnerability->remediation_steps,
+                    'proof_of_concept' => $vulnerability->proof_of_concept,
+                    'discovered_at' => $vulnerability->discovered_at,
+                    'evidence' => [
+                        'screenshot' => $evidence['screenshot'] ?? null,
+                        'logs' => $evidence['logs'] ?? null
+                    ],
+                    'created_at' => $vulnerability->created_at,
+                    'updated_at' => $vulnerability->updated_at
+                ];
+            });
+            
+        // Get vulnerability templates for the add vulnerability form
+        $templates = Vulnerability::where('is_template', true)
+            ->orderBy('name')
+            ->get();
+        
+        return Inertia::render('projects/show', [
+            'project' => $project,
+            'vulnerabilities' => $vulnerabilities,
+            'templates' => $templates,
+        ]);
     }
 
     // Update a specific project
@@ -115,6 +168,7 @@ class ProjectController extends Controller
         $projectsWithDetails = $projects->map(function ($project) {
             return [
                 'id' => $project->id,
+                'client_id' => $project->client_id,
                 'client_name' => $project->client->name,
                 'name' => $project->name,
                 'status' => $project->status,

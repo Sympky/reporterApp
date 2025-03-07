@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { type FC } from "react";
+import { Link } from "@inertiajs/react";
 
 export type Project = {
   id: number;
@@ -19,10 +20,32 @@ export const projectColumns: ColumnDef<Project>[] = [
   {
     accessorKey: "client_name",
     header: "Client Name",
+    cell: ({ row }) => {
+      const project = row.original;
+      return (
+        <Link
+          href={`/clients/${project.client_id}`}
+          className="text-primary hover:underline"
+        >
+          {project.client_name}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "name",
     header: "Project Name",
+    cell: ({ row }) => {
+      const project = row.original;
+      return (
+        <Link
+          href={`/projects/${project.id}`}
+          className="text-primary hover:underline"
+        >
+          {project.name}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "status",

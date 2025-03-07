@@ -63,8 +63,27 @@ class ClientController extends Controller
             return response()->json($client);
         }
         
-        // Redirect to edit page since we don't have a separate show view
-        return redirect()->route('clients.edit', $client);
+        // Get projects for this client
+        $projects = $client->projects()
+            ->with('vulnerabilities')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'client_id' => $project->client_id,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'status' => $project->status,
+                    'due_date' => $project->due_date,
+                    'vulnerability_count' => $project->vulnerabilities->count(),
+                ];
+            });
+            
+        return Inertia::render('clients/show', [
+            'client' => $client,
+            'projects' => $projects,
+        ]);
     }
 
     public function edit(Client $client)

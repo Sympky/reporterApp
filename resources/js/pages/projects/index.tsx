@@ -8,11 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { projectColumns } from '@/components/projectColumns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { type BreadcrumbItem } from '@/types';
+import { Link } from '@inertiajs/react';
 
 // Define the Project interface similar to how we have it for clients
 type Project = {
@@ -468,7 +469,13 @@ export default function ProjectsIndex() {
     actionsColumn.cell = ({ row }) => {
       const project = row.original;
       return (
-        <div className="flex items-center space-x-2">
+        <div className="flex space-x-2">
+          <Link href={`/projects/${project.id}`}>
+            <Button variant="outline" size="sm">
+              <EyeIcon className="h-4 w-4 mr-1" />
+              View
+            </Button>
+          </Link>
           <EditProjectDialog project={project as unknown as Project} />
           <DeleteProjectButton project={project as unknown as Project} />
         </div>

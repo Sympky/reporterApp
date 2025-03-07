@@ -2,12 +2,12 @@
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, Link } from '@inertiajs/react';
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, PencilIcon, TrashIcon, XCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, XCircleIcon, PlusCircleIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useForm } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
@@ -55,6 +55,17 @@ const columns: ColumnDef<Client>[] = [
   {
     accessorKey: "name",
     header: "Nume Client",
+    cell: ({ row }) => {
+      const client = row.original;
+      return (
+        <Link 
+          href={`/clients/${client.id}`}
+          className="hover:underline text-primary font-medium"
+        >
+          {client.name}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "emails", 
@@ -73,6 +84,12 @@ const columns: ColumnDef<Client>[] = [
       const client = row.original;
       return (
         <div className="flex space-x-2">
+          <Link href={`/clients/${client.id}`}>
+            <Button variant="outline" size="sm">
+              <EyeIcon className="h-4 w-4 mr-1" />
+              View
+            </Button>
+          </Link>
           <EditClientDialog client={client} />
           <DeleteClientButton client={client} />
         </div>
