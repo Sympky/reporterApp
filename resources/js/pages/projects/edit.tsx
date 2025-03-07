@@ -25,6 +25,7 @@ type Project = {
   description: string | null;
   status: string | null;
   due_date: string | null;
+  notes: string | null;
   client: Client;
 };
 
@@ -49,6 +50,7 @@ export default function EditProject({ project, clients }: PageProps) {
     description: project.description || '',
     status: project.status || 'Not Started',
     due_date: project.due_date ? new Date(project.due_date).toISOString().split('T')[0] : '',
+    notes: project.notes || '',
   });
 
   // Handle form field changes
@@ -149,6 +151,19 @@ export default function EditProject({ project, clients }: PageProps) {
                     rows={5}
                   />
                   {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    value={data.notes}
+                    onChange={handleChange}
+                    rows={5}
+                    placeholder="Add any additional notes, observations, or reminders about this project"
+                  />
+                  {errors.notes && <p className="text-sm text-red-500">{errors.notes}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

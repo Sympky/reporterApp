@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import NotesComponent from '@/components/notes-component';
 
 // Define the types for Client and Project
 type Client = {
@@ -367,6 +368,14 @@ export default function ClientShow({ client, projects }: PageProps) {
             />
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <NotesComponent 
+            notableType="client"
+            notableId={client.id}
+            title="Client Notes"
+          />
+        </div>
       </div>
     </AppLayout>
   );

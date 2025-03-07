@@ -64,6 +64,7 @@ class ProjectController extends Controller
             'description' => 'nullable|string',
             'status' => 'nullable|string',
             'due_date' => 'nullable|date',
+            'notes' => 'nullable|string',
         ]);
         
         $project = new Project($validated);
@@ -156,6 +157,7 @@ class ProjectController extends Controller
             'description' => 'nullable|string',
             'status' => 'nullable|string',
             'due_date' => 'nullable|date',
+            'notes' => 'nullable|string',
         ]);
         
         $project->update($validated);

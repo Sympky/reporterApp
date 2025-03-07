@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { type BreadcrumbItem } from '@/types';
 import { ChevronLeft, PencilIcon } from 'lucide-react';
+import NotesComponent from '@/components/notes-component';
 
 // Type definitions
 type Vulnerability = {
@@ -19,6 +20,7 @@ type Vulnerability = {
   remediation_steps: string | null;
   proof_of_concept: string | null;
   affected_components: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -149,6 +151,13 @@ export default function ShowVulnerability({ vulnerability, project, client }: Pa
                     <div className="mt-2 whitespace-pre-wrap">{vulnerability.remediation_steps}</div>
                   </div>
                 )}
+                
+                {vulnerability.notes && (
+                  <div>
+                    <h3 className="text-lg font-medium">Notes</h3>
+                    <div className="mt-2 whitespace-pre-wrap">{vulnerability.notes}</div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -206,6 +215,14 @@ export default function ShowVulnerability({ vulnerability, project, client }: Pa
               </CardContent>
             </Card>
           </div>
+        </div>
+        
+        <div className="mt-6">
+          <NotesComponent 
+            notableType="vulnerability"
+            notableId={vulnerability.id}
+            title="Vulnerability Notes"
+          />
         </div>
       </div>
     </AppLayout>

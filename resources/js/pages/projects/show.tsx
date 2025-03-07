@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import NotesComponent from '@/components/notes-component';
 
 // Define types for Project, Client, and Vulnerability
 type Client = {
@@ -26,6 +27,7 @@ type Project = {
   description: string | null;
   status: string | null;
   due_date: string | null;
+  notes: string | null;
   client: Client;
 };
 
@@ -41,6 +43,7 @@ type Vulnerability = {
   remediation_steps: string | null;
   proof_of_concept: string | null;
   affected_components: string | null;
+  notes: string | null;
 };
 
 interface PageProps {
@@ -148,6 +151,7 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
     remediation_steps: '',
     proof_of_concept: '',
     affected_components: '',
+    notes: '',
     discovered_at: new Date().toISOString().split('T')[0],
   });
 
@@ -166,6 +170,7 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
           severity: template.severity ? template.severity.toLowerCase() : 'low',
           cvss: template.cvss ? template.cvss.toString() : '',
           remediation_steps: template.remediation_steps || '',
+          notes: template.notes || '',
           discovered_at: data.discovered_at,
         });
       }
@@ -332,13 +337,28 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
 
             <div className="grid grid-cols-1 gap-2">
               <Label htmlFor="affected_components">Affected Components</Label>
-              <Input
+              <Textarea
                 id="affected_components"
                 value={data.affected_components}
-                onChange={(e) => setData('affected_components', e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('affected_components', e.target.value)}
+                rows={3}
               />
               {errors.affected_components && (
                 <div className="text-sm text-red-500">{errors.affected_components}</div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={data.notes}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('notes', e.target.value)}
+                rows={3}
+                placeholder="Add any additional notes, observations, or reminders about this vulnerability"
+              />
+              {errors.notes && (
+                <div className="text-sm text-red-500">{errors.notes}</div>
               )}
             </div>
 
@@ -475,6 +495,12 @@ export default function ProjectShow({ project, vulnerabilities, templates = [] }
                 <div className="font-semibold text-sm">Due Date</div>
                 <div>{formattedDueDate}</div>
               </div>
+              {project.notes && (
+                <div>
+                  <div className="font-semibold text-sm">Notes</div>
+                  <div className="whitespace-pre-wrap">{project.notes}</div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -532,6 +558,20 @@ export default function ProjectShow({ project, vulnerabilities, templates = [] }
               columns={vulnerabilityColumns} 
               data={vulnerabilities} 
               placeholder="No vulnerabilities found."
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+            <CardDescription>Additional notes about the project</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <NotesComponent 
+              notableType="project"
+              notableId={project.id}
+              title="Project Notes"
             />
           </CardContent>
         </Card>

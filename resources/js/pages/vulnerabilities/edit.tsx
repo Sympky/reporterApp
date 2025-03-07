@@ -25,6 +25,7 @@ type Vulnerability = {
   remediation_steps: string | null;
   proof_of_concept: string | null;
   affected_components: string | null;
+  notes: string | null;
   discovered_at?: string;
 };
 
@@ -66,6 +67,7 @@ export default function EditVulnerability({ vulnerability, project, client }: Pa
     remediation_steps: vulnerability.remediation_steps || '',
     proof_of_concept: vulnerability.proof_of_concept || '',
     affected_components: vulnerability.affected_components || '',
+    notes: vulnerability.notes || '',
     discovered_at: vulnerability.discovered_at 
       ? new Date(vulnerability.discovered_at).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0],
@@ -253,6 +255,19 @@ export default function EditVulnerability({ vulnerability, project, client }: Pa
                     rows={3}
                   />
                   {errors.affected_components && <p className="text-sm text-red-500">{errors.affected_components}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    value={data.notes}
+                    onChange={handleChange}
+                    rows={5}
+                    placeholder="Add any additional notes, personal observations, or reminders about this vulnerability"
+                  />
+                  {errors.notes && <p className="text-sm text-red-500">{errors.notes}</p>}
                 </div>
                 
                 <div className="flex justify-end space-x-2">

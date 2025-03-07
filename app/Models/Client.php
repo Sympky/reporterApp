@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Client extends Model
 {
@@ -23,6 +25,7 @@ class Client extends Model
         'addresses',
         'website_urls',
         'other_contact_info',
+        'notes',
         'created_by',
         'updated_by',
     ];
@@ -46,8 +49,16 @@ class Client extends Model
     /**
      * Get the projects for the client.
      */
-    public function projects()
+    public function projects(): HasMany
     {
         return $this->hasMany(Project::class, 'client_id');
+    }
+
+    /**
+     * Get all of the client's notes.
+     */
+    public function notes(): MorphMany
+    {
+        return $this->morphMany(Note::class, 'notable')->orderBy('created_at', 'desc');
     }
 }

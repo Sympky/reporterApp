@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\VulnerabilityController;
+use App\Http\Controllers\NoteController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -36,7 +37,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // detailed project routes
     Route::get('projects/{project}/vulnerabilities', [ProjectController::class, 'vulnerabilities']);
-  
+
+    // Notes routes
+    Route::post('notes', [NoteController::class, 'store'])->name('notes.store');
+    Route::get('notes', [NoteController::class, 'getNotes'])->name('notes.get');
+    Route::delete('notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
 });
 
 require __DIR__.'/settings.php';
