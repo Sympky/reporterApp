@@ -6,6 +6,7 @@ use App\Models\Client;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ClientController extends Controller
 {
@@ -23,9 +24,9 @@ class ClientController extends Controller
 
     public function store(Request $request)
     {
-        \Log::info('Received client data for creation: ' . json_encode($request->all()));
+        Log::info('Received client data for creation: ' . json_encode($request->all()));
         
-        // Validare
+        // Validation
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -43,27 +44,17 @@ class ClientController extends Controller
             }
         }
 
-        \Log::info('Validated client data (after defaults): ' . json_encode($validated));
+        Log::info('Validated client data: ' . json_encode($validated));
 
-        // Adăugare utilizator curent ca creator și editor
-        // If the user isn't authenticated, default to user ID 1 (likely an admin)
-        $userId = Auth::id() ?? 1;
-        $validated['created_by'] = $userId;
-        $validated['updated_by'] = $userId;
+        // Create the client
+        $client = new Client($validated);
+        $client->created_by = Auth::id();
+        $client->updated_by = Auth::id();
+        $client->save();
 
-        // Creare client
-        $client = Client::create($validated);
-        
-        // Log the client that was actually saved
-        \Log::info('Saved client data: ' . json_encode($client->toArray()));
+        Log::info('Client created successfully with ID: ' . $client->id);
 
-        // Check if this is an API request or an Inertia request
-        if ($request->expectsJson()) {
-            return response()->json($client, 201);
-        }
-        
-        // Return an Inertia redirect response for web requests
-        return redirect()->route('clients.index')->with('message', 'Client created successfully');
+        return redirect()->route('clients.index');
     }
 
     public function show(Request $request, Client $client)
@@ -85,9 +76,9 @@ class ClientController extends Controller
 
     public function update(Request $request, Client $client)
     {
-        \Log::info('Received client data for update: ' . json_encode($request->all()));
+        Log::info('Received client data for update: ' . json_encode($request->all()));
         
-        // Validare
+        // Validation
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -105,39 +96,26 @@ class ClientController extends Controller
             }
         }
 
-        \Log::info('Validated client data (after defaults): ' . json_encode($validated));
+        Log::info('Validated client data: ' . json_encode($validated));
 
-        // Adăugare utilizator curent ca editor
-        // Ensure updated_by is not null by using Auth::id() if available,
-        // or falling back to the client's created_by value
-        $userId = Auth::id();
-        if ($userId) {
-            $validated['updated_by'] = $userId;
-        } else {
-            // If no authenticated user, use the original creator
-            $validated['updated_by'] = $client->created_by;
-        }
+        // Update the client
+        $client->fill($validated);
+        $client->updated_by = Auth::id();
+        $client->save();
 
-        // Actualizare client
-        $client->update($validated);
+        Log::info('Client updated successfully with ID: ' . $client->id);
 
-        // Check if this is an API request or an Inertia request
-        if ($request->expectsJson()) {
-            return response()->json($client, 200);
-        }
-        
-        // Return an Inertia redirect response for web requests
-        return redirect()->route('clients.index')->with('message', 'Client updated successfully');
+        return redirect()->route('clients.index');
     }
 
     public function destroy(Request $request, Client $client)
     {
-        // Verificare dacă clientul are proiecte asociate
+        // Check if the client has associated projects
         if ($client->projects()->count() > 0) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'Nu se poate șterge clientul deoarece are proiecte asociate.'], 422);
+                return response()->json(['message' => 'Cannot delete the client because they have associated projects.'], 422);
             }
-            return redirect()->back()->with('error', 'Nu se poate șterge clientul deoarece are proiecte asociate.');
+            return redirect()->back()->with('error', 'Cannot delete the client because they have associated projects.');
         }
 
         // Ștergere client

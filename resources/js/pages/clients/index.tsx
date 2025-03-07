@@ -68,7 +68,7 @@ const columns: ColumnDef<Client>[] = [
   },
   {
     id: "actions",
-    header: "Acțiuni",
+    header: "Actions",
     cell: ({ row }) => {
       const client = row.original;
       return (
@@ -87,21 +87,16 @@ function EditClientDialog({ client }: { client: Client }) {
 
   // Helper function to ensure we have valid JSON arrays
   const ensureJsonArray = (value: string | null | undefined): string => {
-    console.log(`Ensuring JSON array for value:`, value);
     if (!value) {
-      console.log('No value, returning empty array');
       return '[]';
     }
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) {
-        console.log('Value is already an array:', parsed);
         return value;
       }
-      console.log('Value is not an array, wrapping:', parsed);
       return JSON.stringify([value]);
     } catch (e) {
-      console.log('Error parsing JSON, treating as string:', value);
       return value ? JSON.stringify([value]) : '[]';
     }
   };
@@ -116,17 +111,13 @@ function EditClientDialog({ client }: { client: Client }) {
     other_contact_info: ensureJsonArray(client.other_contact_info),
   };
   
-  console.log('Initializing edit form with:', initialFormData);
-
   const { data, setData: originalSetData, put, processing, errors } = useForm(initialFormData);
   
   // Wrap setData to add debugging
   const setData = <K extends keyof typeof data>(key: K, value: any) => {
-    console.log(`Setting ${key} to:`, value);
     originalSetData(key, value);
     // Verify data was updated
     setTimeout(() => {
-      console.log(`Verifying ${key} was set to:`, data[key]);
     }, 0);
   };
 
@@ -141,16 +132,11 @@ function EditClientDialog({ client }: { client: Client }) {
     // Short delay to ensure all state updates have processed
     setTimeout(() => {
       // Submit the form
-      console.log('Submitting client data:', data);
-      console.log('Form JSON data:', JSON.stringify(data, null, 2));
-      
       put(`/clients/${client.id}`, {
         onSuccess: () => {
-          console.log('Client updated successfully');
           window.location.reload();
         },
         onError: (errors) => {
-          console.error('Error updating client:', errors);
         }
       });
     }, 100);
@@ -281,8 +267,6 @@ function CreateClientDialog() {
     other_contact_info: '[]',
   };
   
-  console.log('Initializing create form with:', initialFormData);
-  
   const { data, setData, post, processing, errors, reset } = useForm(initialFormData);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -295,46 +279,12 @@ function CreateClientDialog() {
     
     // Short delay to ensure all state updates have processed
     setTimeout(() => {
-      console.log('Creating client with data:', data);
-      console.log('Form JSON data:', JSON.stringify(data, null, 2));
-      
-      // Check if JSON fields are properly formatted as arrays
-      type FormFields = keyof typeof data;
-      const fieldsToCheck: FormFields[] = ['emails', 'phone_numbers', 'website_urls', 'other_contact_info'];
-      let allFieldsValid = true;
-      
-      fieldsToCheck.forEach(field => {
-        try {
-          const value = data[field];
-          if (value) {
-            const parsed = JSON.parse(value as string);
-            if (!Array.isArray(parsed)) {
-              console.error(`Field ${field} is not a valid JSON array:`, value);
-              allFieldsValid = false;
-            } else {
-              console.log(`Field ${field} is valid JSON array:`, parsed);
-            }
-          } else {
-            console.log(`Field ${field} is empty, will default to [] on server`);
-          }
-        } catch (e) {
-          console.error(`Error parsing ${field}:`, e);
-          allFieldsValid = false;
-        }
-      });
-      
-      if (!allFieldsValid) {
-        console.error('Form has invalid JSON values, but submitting anyway');
-      }
-      
       post('/clients', {
         onSuccess: () => {
-          console.log('Client created successfully');
           reset();
           window.location.reload();
         },
         onError: (errors) => {
-          console.error('Error creating client:', errors);
         }
       });
     }, 100);
@@ -449,55 +399,42 @@ function MultipleValueInput({
 }) {
   // Parse the stringified JSON array or initialize an empty array
   const [values, setValues] = useState<string[]>(() => {
-    console.log(`Initializing ${label} with value:`, value);
     if (!value) {
-      console.log(`${label}: No value, returning empty array`);
       return [];
     }
     try {
       const parsed = JSON.parse(value);
-      console.log(`${label}: Successfully parsed JSON:`, parsed);
       if (Array.isArray(parsed)) {
         return parsed;
       }
-      console.log(`${label}: Value is not an array, wrapping:`, parsed);
       return [String(parsed)];
     } catch (e) {
-      console.log(`${label}: Error parsing JSON, using as string:`, value);
       return value ? [value] : [];
     }
   });
   
   // Update values when the input value changes from outside
   useEffect(() => {
-    console.log(`${label} value changed to:`, value);
-    
     if (value === undefined || value === null) {
-      console.log(`${label}: Received null or undefined, setting empty array`);
       setValues([]);
-      // Important: Ensure we update the parent form with a valid empty array JSON
       onChange('[]');
       return;
     }
     
     try {
       const parsed = JSON.parse(value);
-      console.log(`${label}: Parsed value in effect:`, parsed);
       
       if (Array.isArray(parsed)) {
         setValues(parsed);
       } else if (value) {
-        console.log(`${label}: Wrapping non-array value:`, parsed);
         const newArray = [String(parsed)];
         setValues(newArray);
         onChange(JSON.stringify(newArray));
       } else {
-        console.log(`${label}: Setting empty array for empty value`);
         setValues([]);
         onChange('[]');
       }
     } catch (e) {
-      console.log(`${label}: Error parsing in effect, using as string:`, value);
       if (value) {
         const newArray = [value];
         setValues(newArray);
@@ -525,13 +462,9 @@ function MultipleValueInput({
   const addValue = () => {
     if (currentValue.trim()) {
       const newValues = [...values, currentValue.trim()];
-      console.log(`${label}: Adding new value to array:`, newValues);
       setValues(newValues);
       const jsonString = JSON.stringify(newValues);
-      console.log(`${label}: New JSON after addition:`, jsonString);
-      // This triggers the form update with the new JSON array
       onChange(jsonString);
-      console.log(`${label}: Called onChange with:`, jsonString);
       setCurrentValue('');
     }
   };
@@ -539,7 +472,6 @@ function MultipleValueInput({
   // Handle blur event to add any pending value
   const handleBlur = () => {
     if (currentValue.trim()) {
-      console.log(`${label}: Adding pending value on blur:`, currentValue);
       addValue();
     }
   };
@@ -547,11 +479,8 @@ function MultipleValueInput({
   // Remove a value
   const removeValue = (index: number) => {
     const newValues = values.filter((_, i) => i !== index);
-    console.log(`${label}: After removing item ${index}:`, newValues);
     setValues(newValues);
     const jsonString = newValues.length > 0 ? JSON.stringify(newValues) : '[]';
-    console.log(`${label}: New JSON after removal:`, jsonString);
-    // This triggers the form update with the updated JSON array
     onChange(jsonString);
   };
   
@@ -634,7 +563,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     href: '/dashboard',
   },
   {
-    title: 'Clienți',
+    title: 'Clients',
     href: '/clients',
   },
 ];
@@ -644,10 +573,10 @@ export default function ClientsIndex() {
   
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Clienți" />
+      <Head title="Clients" />
       <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Clienți</h1>
+          <h1 className="text-2xl font-bold">Clients</h1>
           <CreateClientDialog />
         </div>
         

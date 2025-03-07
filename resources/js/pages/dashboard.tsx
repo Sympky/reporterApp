@@ -35,21 +35,33 @@ export default function Dashboard() {
     }, []);
 
     const handleClientClick = (clientId: number) => {
-        axios.get(`/api/clients/${clientId}/projects`).then(response => {
-            console.log('Client Projects:', response.data);
-        });
+        axios.get(`/api/clients/${clientId}/projects`)
+            .then(response => {
+                // Process the response data here
+            })
+            .catch(error => {
+                // Handle errors appropriately
+            });
     };
 
     const handleProjectClick = (projectId: number) => {
-        axios.get(`/api/projects/${projectId}/vulnerabilities`).then(response => {
-            console.log('Project Vulnerabilities:', response.data);
-        });
+        axios.get(`/api/projects/${projectId}/vulnerabilities`)
+            .then(response => {
+                // Process the response data here
+            })
+            .catch(error => {
+                // Handle errors appropriately
+            });
     };
 
     const handleVulnerabilityClick = (vulnerabilityId: number) => {
-        axios.get(`/api/vulnerabilities/${vulnerabilityId}`).then(response => {
-            console.log('Vulnerability Details:', response.data);
-        });
+        axios.get(`/api/vulnerabilities/${vulnerabilityId}`)
+            .then(response => {
+                // Process the response data here
+            })
+            .catch(error => {
+                // Handle errors appropriately
+            });
     };
 
     return (
