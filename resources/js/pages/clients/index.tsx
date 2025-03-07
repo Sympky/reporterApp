@@ -100,7 +100,7 @@ const columns: ColumnDef<Client>[] = [
 
 // Componenta pentru dialogul de editare client
 function EditClientDialog({ client }: { client: Client }) {
-  // Remove all refs, we don't need them
+  const [open, setOpen] = useState(false);
 
   // Helper function to ensure we have valid JSON arrays
   const ensureJsonArray = (value: string | null | undefined): string => {
@@ -128,15 +128,7 @@ function EditClientDialog({ client }: { client: Client }) {
     other_contact_info: ensureJsonArray(client.other_contact_info),
   };
   
-  const { data, setData: originalSetData, put, processing, errors } = useForm(initialFormData);
-  
-  // Wrap setData to add debugging
-  const setData = <K extends keyof typeof data>(key: K, value: any) => {
-    originalSetData(key, value);
-    // Verify data was updated
-    setTimeout(() => {
-    }, 0);
-  };
+  const { data, setData, put, processing, errors, reset } = useForm(initialFormData);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -146,21 +138,19 @@ function EditClientDialog({ client }: { client: Client }) {
       document.activeElement.blur();
     }
     
-    // Short delay to ensure all state updates have processed
-    setTimeout(() => {
-      // Submit the form
-      put(`/clients/${client.id}`, {
-        onSuccess: () => {
-          window.location.reload();
-        },
-        onError: (errors) => {
-        }
-      });
-    }, 100);
+    put(`/clients/${client.id}`, {
+      onSuccess: () => {
+        setOpen(false); // Close the dialog
+        window.location.reload(); // Reload the page to show updated data
+      },
+      onError: (errors) => {
+        console.error("Error updating client:", errors);
+      }
+    });
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <PencilIcon className="h-4 w-4" />
@@ -273,7 +263,14 @@ function DeleteClientButton({ client }: { client: Client }) {
 }
 
 // Componenta pentru dialogul de creare client
-function CreateClientDialog() {
+function CreateClientDialog({ defaultOpen = false }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  
+  // Effect to update open state when defaultOpen changes
+  useEffect(() => {
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
+  
   const initialFormData = {
     name: '',
     description: '',
@@ -298,21 +295,22 @@ function CreateClientDialog() {
     setTimeout(() => {
       post('/clients', {
         onSuccess: () => {
+          setOpen(false); // Close the dialog on success
           reset();
-          window.location.reload();
+          window.location.href = '/clients'; // Redirect without query parameter
         },
         onError: (errors) => {
+          console.error('Failed to create client:', errors);
         }
       });
     }, 100);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Adaugă Client
+          <PlusIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -587,6 +585,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function ClientsIndex() {
   const { clients = [] } = usePage().props as PageProps;
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  
+  // Check if the action=create parameter is in the URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('action') === 'create') {
+      setOpenCreateDialog(true);
+      
+      // Optionally remove the parameter from URL to prevent reopening on refresh
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
   
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -594,7 +605,7 @@ export default function ClientsIndex() {
       <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Clients</h1>
-          <CreateClientDialog />
+          <CreateClientDialog defaultOpen={openCreateDialog} />
         </div>
         
         <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border">

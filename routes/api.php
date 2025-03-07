@@ -36,4 +36,11 @@ Route::get('projects/{project}/vulnerabilities', [ProjectController::class, 'pro
 // Vulnerabilities API Routes
 Route::get('vulnerabilities/{vulnerability}', [VulnerabilityController::class, 'show']);
 
+// Sidebar navigation data
+Route::get('sidebar/clients-with-projects', function() {
+    return App\Models\Client::with(['projects' => function($query) {
+        $query->select('id', 'client_id', 'name');
+    }])->select('id', 'name')->get();
+});
+
 

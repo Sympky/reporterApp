@@ -132,6 +132,21 @@ class ProjectController extends Controller
         ]);
     }
 
+    // Show form to edit a project
+    public function edit(Project $project)
+    {
+        // Load the related client for the project
+        $project->load('client');
+        
+        // Get the list of available clients for the dropdown
+        $clients = Client::select('id', 'name')->get();
+        
+        return Inertia::render('projects/edit', [
+            'project' => $project,
+            'clients' => $clients,
+        ]);
+    }
+
     // Update a specific project
     public function update(Request $request, Project $project)
     {

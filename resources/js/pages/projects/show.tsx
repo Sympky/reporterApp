@@ -141,13 +141,14 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
     project_id: projectId,
     name: '',
     description: '',
-    severity: 'Low',
+    severity: 'low',
     cvss: '',
     cve: '',
-    status: 'Open',
+    status: 'open',
     remediation_steps: '',
     proof_of_concept: '',
     affected_components: '',
+    discovered_at: new Date().toISOString().split('T')[0],
   });
 
   const handleTemplateChange = (templateId: string) => {
@@ -162,9 +163,10 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
           ...data,
           name: template.name,
           description: template.description || '',
-          severity: template.severity || 'Low',
+          severity: template.severity ? template.severity.toLowerCase() : 'low',
           cvss: template.cvss ? template.cvss.toString() : '',
           remediation_steps: template.remediation_steps || '',
+          discovered_at: data.discovered_at,
         });
       }
     }
@@ -269,11 +271,11 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
                   onChange={(e) => setData('severity', e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="Critical">Critical</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                  <option value="Informational">Informational</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                  <option value="info">Info</option>
                 </select>
                 {errors.severity && (
                   <div className="text-sm text-red-500">{errors.severity}</div>
@@ -318,10 +320,10 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
                 onChange={(e) => setData('status', e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="Open">Open</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Fixed">Fixed</option>
-                <option value="Won't Fix">Won't Fix</option>
+                <option value="open">Open</option>
+                <option value="in progress">In Progress</option>
+                <option value="fixed">Fixed</option>
+                <option value="won't fix">Won't Fix</option>
               </select>
               {errors.status && (
                 <div className="text-sm text-red-500">{errors.status}</div>

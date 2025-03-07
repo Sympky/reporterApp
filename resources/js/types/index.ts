@@ -19,6 +19,22 @@ export interface NavItem {
     url: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    children?: NavItemChild[];
+    isExpanded?: boolean;
+}
+
+export interface NavItemChild {
+    id: number;
+    title: string;
+    url: string;
+    children?: NavItemGrandChild[];
+    isExpanded?: boolean;
+}
+
+export interface NavItemGrandChild {
+    id: number;
+    title: string;
+    url: string;
 }
 
 export interface SharedData {

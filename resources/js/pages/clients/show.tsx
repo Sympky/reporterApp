@@ -156,6 +156,11 @@ function AddProjectDialog({ clientId }: { clientId: number }) {
       onSuccess: () => {
         setOpen(false);
         reset();
+        // Reload the page to show the new project
+        window.location.reload();
+      },
+      onError: (errors) => {
+        console.error('Failed to add project:', errors);
       },
     });
   };
