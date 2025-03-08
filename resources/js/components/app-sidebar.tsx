@@ -90,16 +90,16 @@ export function AppSidebar() {
             url: '/dashboard',
             icon: LayoutGrid,
         },
-        // {
-        //     title: 'Projects',
-        //     url: '/projects',
-        //     icon: Package,
-        // },
-        // {
-        //     title: 'Vulnerabilities',
-        //     url: '/vulnerabilities',
-        //     icon: Bug,
-        // },
+        {
+            title: 'Projects',
+            url: '/projects',
+            icon: Package,
+        },
+        {
+            title: 'Vulnerabilities',
+            url: '/vulnerabilities',
+            icon: Bug,
+        },
         {
             title: 'Vulnerability Templates',
             url: '/vulnerability-templates',

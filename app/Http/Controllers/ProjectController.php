@@ -88,8 +88,8 @@ class ProjectController extends Controller
             ->get()
             ->map(function ($vulnerability) {
                 // Parse JSON fields
-                $evidence = json_decode($vulnerability->evidence, true) ?? [];
-                $tags = json_decode($vulnerability->tags, true) ?? [];
+                $evidence = !empty($vulnerability->evidence) ? json_decode($vulnerability->evidence, true) : [];
+                $tags = !empty($vulnerability->tags) ? json_decode($vulnerability->tags, true) : [];
                 
                 return [
                     'id' => $vulnerability->id,
@@ -102,12 +102,12 @@ class ProjectController extends Controller
                     'affected_components' => $vulnerability->affected_components,
                     'affected_resources' => $vulnerability->affected_resources,
                     'tags' => $tags,
-                    'severity' => ucfirst(strtolower($vulnerability->severity)),
+                    'severity' => $vulnerability->severity ? ucfirst(strtolower($vulnerability->severity)) : null,
                     'cvss' => $vulnerability->cvss ? (float)$vulnerability->cvss : null,
                     'cve' => $vulnerability->cve,
-                    'likelihood_score' => ucfirst(strtolower($vulnerability->likelihood_score)),
-                    'remediation_score' => ucfirst(strtolower($vulnerability->remediation_score)),
-                    'impact_score' => ucfirst(strtolower($vulnerability->impact_score)),
+                    'likelihood_score' => $vulnerability->likelihood_score ? ucfirst(strtolower($vulnerability->likelihood_score)) : null,
+                    'remediation_score' => $vulnerability->remediation_score ? ucfirst(strtolower($vulnerability->remediation_score)) : null,
+                    'impact_score' => $vulnerability->impact_score ? ucfirst(strtolower($vulnerability->impact_score)) : null,
                     'status' => $vulnerability->status,
                     'remediation_steps' => $vulnerability->remediation_steps,
                     'proof_of_concept' => $vulnerability->proof_of_concept,
