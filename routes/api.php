@@ -37,10 +37,8 @@ Route::get('projects/{project}/vulnerabilities', [ProjectController::class, 'pro
 Route::get('vulnerabilities/{vulnerability}', [VulnerabilityController::class, 'show']);
 
 // Sidebar navigation data
-Route::get('sidebar/clients-with-projects', function() {
-    return App\Models\Client::with(['projects' => function($query) {
-        $query->select('id', 'client_id', 'name');
-    }])->select('id', 'name')->get();
-});
+Route::get('sidebar/clients-with-projects', [ClientController::class, 'sidebarClientsWithProjects']);
+
+// Latest clients with projects for sidebar
 
 

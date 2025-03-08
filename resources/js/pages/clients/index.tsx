@@ -54,7 +54,7 @@ const formatArrayValue = (value: unknown): string => {
 const columns: ColumnDef<Client>[] = [
   {
     accessorKey: "name",
-    header: "Nume Client",
+    header: "Client Name",
     cell: ({ row }) => {
       const client = row.original;
       return (
@@ -69,12 +69,12 @@ const columns: ColumnDef<Client>[] = [
   },
   {
     accessorKey: "emails", 
-    header: "Email-uri",
+    header: "Emails",
     cell: ({ row }) => formatArrayValue(row.getValue("emails")),
   },
   {
     accessorKey: "phone_numbers",
-    header: "Telefoane",
+    header: "Phone Numbers",
     cell: ({ row }) => formatArrayValue(row.getValue("phone_numbers")),
   },
   {
@@ -158,14 +158,14 @@ function EditClientDialog({ client }: { client: Client }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editare Client</DialogTitle>
+          <DialogTitle>Edit Client</DialogTitle>
           <DialogDescription>
-            Modificați informațiile clientului și apăsați butonul Salvează.
+            Modify the client's information and click the Save button.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium">Nume</label>
+            <label htmlFor="name" className="block text-sm font-medium">Name</label>
             <input
               type="text"
               id="name"
@@ -177,7 +177,7 @@ function EditClientDialog({ client }: { client: Client }) {
           </div>
           
           <div>
-            <label htmlFor="description" className="block text-sm font-medium">Descriere</label>
+            <label htmlFor="description" className="block text-sm font-medium">Description</label>
             <textarea
               id="description"
               value={data.description || ''}
@@ -187,23 +187,23 @@ function EditClientDialog({ client }: { client: Client }) {
           </div>
           
           <MultipleValueInput
-            label="Email-uri"
+            label="Emails"
             id="emails"
             value={data.emails}
             onChange={value => setData('emails', value)}
-            placeholder="Adaugă adresă de email..."
+            placeholder="Add email address..."
           />
           
           <MultipleValueInput
-            label="Numere de telefon"
+            label="Phone Numbers"
             id="phone_numbers"
             value={data.phone_numbers}
             onChange={value => setData('phone_numbers', value)}
-            placeholder="Adaugă număr de telefon..."
+            placeholder="Add phone number..."
           />
           
           <div>
-            <label htmlFor="addresses" className="block text-sm font-medium">Adrese</label>
+            <label htmlFor="addresses" className="block text-sm font-medium">Addresses</label>
             <textarea
               id="addresses"
               value={data.addresses || ''}
@@ -217,20 +217,20 @@ function EditClientDialog({ client }: { client: Client }) {
             id="website_urls"
             value={data.website_urls}
             onChange={value => setData('website_urls', value)}
-            placeholder="Adaugă URL website..."
+            placeholder="Add Website URL..."
           />
           
           <MultipleValueInput
-            label="Alte informații de contact"
+            label="Other Contact Information"
             id="other_contact_info"
             value={data.other_contact_info}
             onChange={value => setData('other_contact_info', value)}
-            placeholder="Adaugă alte informații de contact..."
+            placeholder="Add other contact information..."
           />
           
           <div className="flex justify-end">
             <Button type="submit" disabled={processing}>
-              Salvează
+              Save
             </Button>
           </div>
         </form>
@@ -239,17 +239,17 @@ function EditClientDialog({ client }: { client: Client }) {
   );
 }
 
-// Componenta pentru butonul de ștergere client
+// Component for client delete button
 function DeleteClientButton({ client }: { client: Client }) {
   const handleDelete = () => {
-    if (confirm(`Ești sigur că vrei să ștergi clientul ${client.name}?`)) {
+    if (confirm(`Are you sure you want to delete the client ${client.name}?`)) {
       axios.delete(`/clients/${client.id}`).then(() => {
         window.location.reload();
       }).catch(error => {
         if (error.response && error.response.status === 422) {
           alert(error.response.data.message);
         } else {
-          alert("A apărut o eroare la ștergerea clientului.");
+          alert("An error occurred while deleting the client.");
         }
       });
     }
@@ -315,14 +315,14 @@ function CreateClientDialog({ defaultOpen = false }: { defaultOpen?: boolean }) 
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Adaugă Client Nou</DialogTitle>
+          <DialogTitle>Add New Client</DialogTitle>
           <DialogDescription>
-            Completați informațiile clientului nou și apăsați butonul Salvează.
+            Complete the information for the new client and click the Save button.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium">Nume</label>
+            <label htmlFor="name" className="block text-sm font-medium">Name</label>
             <input
               type="text"
               id="name"
@@ -334,7 +334,7 @@ function CreateClientDialog({ defaultOpen = false }: { defaultOpen?: boolean }) 
           </div>
           
           <div>
-            <label htmlFor="description" className="block text-sm font-medium">Descriere</label>
+            <label htmlFor="description" className="block text-sm font-medium">Description</label>
             <textarea
               id="description"
               value={data.description}
@@ -344,23 +344,23 @@ function CreateClientDialog({ defaultOpen = false }: { defaultOpen?: boolean }) 
           </div>
           
           <MultipleValueInput
-            label="Email-uri"
+            label="Emails"
             id="create-emails"
             value={data.emails}
             onChange={value => setData('emails', value)}
-            placeholder="Adaugă adresă de email..."
+            placeholder="Add email address..."
           />
           
           <MultipleValueInput
-            label="Numere de telefon"
+            label="Phone Numbers"
             id="create-phone_numbers"
             value={data.phone_numbers}
             onChange={value => setData('phone_numbers', value)}
-            placeholder="Adaugă număr de telefon..."
+            placeholder="Add phone number..."
           />
           
           <div>
-            <label htmlFor="create-addresses" className="block text-sm font-medium">Adrese</label>
+            <label htmlFor="create-addresses" className="block text-sm font-medium">Addresses</label>
             <textarea
               id="create-addresses"
               value={data.addresses}
@@ -374,20 +374,20 @@ function CreateClientDialog({ defaultOpen = false }: { defaultOpen?: boolean }) 
             id="create-website_urls"
             value={data.website_urls}
             onChange={value => setData('website_urls', value)}
-            placeholder="Adaugă URL website..."
+            placeholder="Add Website URL..."
           />
           
           <MultipleValueInput
-            label="Alte informații de contact"
+            label="Other Contact Information"
             id="create-other_contact_info"
             value={data.other_contact_info}
             onChange={value => setData('other_contact_info', value)}
-            placeholder="Adaugă alte informații de contact..."
+            placeholder="Add other contact information..."
           />
           
           <div className="flex justify-end">
             <Button type="submit" disabled={processing}>
-              Salvează
+              Save
             </Button>
           </div>
         </form>
@@ -556,7 +556,7 @@ function MultipleValueInput({
             onChange={e => setCurrentValue(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
-            placeholder={placeholder || `Adaugă ${label.toLowerCase()}...`}
+            placeholder={placeholder || `Add ${label.toLowerCase()}...`}
             className="flex-grow block rounded-md border-gray-300 shadow-sm"
           />
           <button 

@@ -129,7 +129,7 @@ class ClientController extends Controller
 
     public function destroy(Request $request, Client $client)
     {
-        // Check if the client has associated projects
+        // Check if client has projects
         if ($client->projects()->count() > 0) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Cannot delete the client because they have associated projects.'], 422);
@@ -137,7 +137,7 @@ class ClientController extends Controller
             return redirect()->back()->with('error', 'Cannot delete the client because they have associated projects.');
         }
 
-        // Ștergere client
+        // Delete client
         $client->delete();
 
         // Check if this is an API request or an Inertia request
@@ -149,9 +149,34 @@ class ClientController extends Controller
         return redirect()->route('clients.index')->with('message', 'Client deleted successfully');
     }
 
+    /**
+     * Get latest clients with their projects
+     * Used by both the dashboard and sidebar
+     */
     public function latestClients()
     {
-        $clients = Client::orderBy('created_at', 'desc')->take(5)->get();
+        $clients = Client::with(['projects' => function($query) {
+            $query->select('id', 'client_id', 'name');
+        }])
+        ->select('id', 'name', 'created_at', 'emails', 'phone_numbers', 'addresses', 'website_urls')
+        ->orderBy('created_at', 'desc')
+        ->take(5)
+        ->get();
+        
+        return response()->json($clients);
+    }
+
+    /**
+     * Get all clients with projects for sidebar
+     */
+    public function sidebarClientsWithProjects()
+    {
+        $clients = Client::with(['projects' => function($query) {
+            $query->select('id', 'client_id', 'name');
+        }])
+        ->select('id', 'name')
+        ->get();
+        
         return response()->json($clients);
     }
 

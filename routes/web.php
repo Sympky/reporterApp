@@ -7,6 +7,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\VulnerabilityController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\MethodologyController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -49,6 +50,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('files', [FileController::class, 'getFiles'])->name('files.get');
     Route::get('files/{file}/download', [FileController::class, 'download'])->name('files.download');
     Route::delete('files/{file}', [FileController::class, 'destroy'])->name('files.destroy');
+    
+    // Methodology routes
+    Route::resource('methodologies', MethodologyController::class);
 });
 
 require __DIR__.'/settings.php';

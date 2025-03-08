@@ -25,7 +25,7 @@ export function AppSidebar() {
 
     // Fetch clients with their projects when component mounts
     useEffect(() => {
-        axios.get('/api/sidebar/clients-with-projects')
+        axios.get('/api/latest-clients')
             .then(response => {
                 setClients(response.data);
                 setLoading(false);
@@ -62,7 +62,7 @@ export function AppSidebar() {
             };
         });
 
-        // Add "+ Add Client" as the first item
+        // Add "+ Add Client" as the first item and "Show More" as the last item
         const allClientItems: NavItemChild[] = [
             {
                 id: 0, // Use 0 as a special ID for the add client item
@@ -70,7 +70,13 @@ export function AppSidebar() {
                 url: "/clients?action=create", // Special URL with query parameter to trigger add client dialog
                 isExpanded: false
             },
-            ...clientItems
+            ...clientItems,
+            {
+                id: -1, // Use -1 as a special ID for the show more item
+                title: "Show More",
+                url: "/clients", // Link to all clients page
+                isExpanded: false
+            }
         ];
 
         // Return the main Clients nav item with clients as children
@@ -121,8 +127,8 @@ export function AppSidebar() {
             icon: Folder,
         },
         {
-            title: 'Documentation',
-            url: 'https://laravel.com/docs/starter-kits',
+            title: 'Methodologies',
+            url: '/methodologies',
             icon: BookOpen,
         },
     ];

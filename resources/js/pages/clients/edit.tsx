@@ -146,7 +146,7 @@ export default function EditClient({ client }: PageProps) {
                       value={data.emails}
                       onChange={handleChange}
                       rows={2}
-                      placeholder="Enter email addresses as JSON array, e.g. [\"email@example.com\"]"
+                      placeholder="Enter email addresses as JSON array, e.g. ['email@example.com']"
                     />
                     {errors.emails && <p className="text-sm text-red-500">{errors.emails}</p>}
                   </div>
@@ -159,7 +159,7 @@ export default function EditClient({ client }: PageProps) {
                       value={data.phone_numbers}
                       onChange={handleChange}
                       rows={2}
-                      placeholder="Enter phone numbers as JSON array, e.g. [\"+1234567890\"]"
+                      placeholder="Enter phone numbers as JSON array, e.g. ['+1234567890']"
                     />
                     {errors.phone_numbers && <p className="text-sm text-red-500">{errors.phone_numbers}</p>}
                   </div>
@@ -184,7 +184,7 @@ export default function EditClient({ client }: PageProps) {
                       value={data.website_urls}
                       onChange={handleChange}
                       rows={2}
-                      placeholder="Enter website URLs as JSON array, e.g. [\"https://example.com\"]"
+                      placeholder="Enter website URLs as JSON array, e.g. ['https://example.com']"
                     />
                     {errors.website_urls && <p className="text-sm text-red-500">{errors.website_urls}</p>}
                   </div>
