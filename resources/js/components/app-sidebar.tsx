@@ -123,7 +123,7 @@ export function AppSidebar() {
     const footerNavItems: NavItem[] = [
         {
             title: 'Repository',
-            url: 'https://github.com/laravel/react-starter-kit',
+            url: 'https://github.com/Sympky/reporterApp',
             icon: Folder,
         },
         {
