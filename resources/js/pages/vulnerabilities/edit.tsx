@@ -28,6 +28,9 @@ type Vulnerability = {
   affected_components: string | null;
   notes: string | null;
   discovered_at?: string;
+  impact_score: string | null;
+  likelihood_score: string | null;
+  remediation_score: string | null;
 };
 
 type Project = {
@@ -72,6 +75,9 @@ export default function EditVulnerability({ vulnerability, project, client }: Pa
     discovered_at: vulnerability.discovered_at 
       ? new Date(vulnerability.discovered_at).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0],
+    impact_score: vulnerability.impact_score || '',
+    likelihood_score: vulnerability.likelihood_score || '',
+    remediation_score: vulnerability.remediation_score || '',
   });
 
   // Handle form field changes
@@ -159,6 +165,71 @@ export default function EditVulnerability({ vulnerability, project, client }: Pa
                       </SelectContent>
                     </Select>
                     {errors.severity && <p className="text-sm text-red-500">{errors.severity}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="impact_score">Impact Score</Label>
+                    <Select
+                      value={data.impact_score}
+                      onValueChange={(value) => handleSelectChange('impact_score', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select impact score" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="info">Info</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.impact_score && <p className="text-sm text-red-500">{errors.impact_score}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="likelihood_score">Likelihood Score</Label>
+                    <Select
+                      value={data.likelihood_score}
+                      onValueChange={(value) => handleSelectChange('likelihood_score', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select likelihood score" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="info">Info</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.likelihood_score && <p className="text-sm text-red-500">{errors.likelihood_score}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="remediation_score">Remediation Score</Label>
+                    <Select
+                      value={data.remediation_score}
+                      onValueChange={(value) => handleSelectChange('remediation_score', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select remediation score" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="info">Info</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.remediation_score && <p className="text-sm text-red-500">{errors.remediation_score}</p>}
                   </div>
                 </div>
 

@@ -20,6 +20,7 @@ type Vulnerability = {
   project_id: number;
   project_name: string;
   client_name: string;
+  client_id: number;
   name: string;
   description: string;
   severity: string;
@@ -27,6 +28,9 @@ type Vulnerability = {
   cve: string;
   remediation: string | null;
   discovered_at: string;
+  impact_score?: string | null;
+  likelihood_score?: string | null;
+  remediation_score?: string | null;
 };
 
 // Type definition for the page props
@@ -37,6 +41,20 @@ interface PageProps {
     name: string;
     client_name: string;
   }[];
+  templates?: {
+    id: number;
+    name: string;
+    description: string;
+    severity: string;
+    cvss: number | null;
+    cve: string;
+    remediation_steps: string | null;
+    impact: string | null;
+    references: string | null;
+    tags: string | null;
+    likelihood_score?: string | null;
+    remediation_score?: string | null;
+  }[];
 }
 
 // EditVulnerabilityDialog component
@@ -46,7 +64,24 @@ export function EditVulnerabilityDialog({ vulnerability }: { vulnerability: Vuln
   const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  const { data, setData, put, errors } = useForm({
+  // Define the form data interface
+  interface VulnerabilityEditFormData {
+    id: number;
+    project_id: string;
+    name: string;
+    description: string;
+    severity: string;
+    cvss: string;
+    cve: string;
+    recommendations: string;
+    discovered_at: string;
+    impact_score: string;
+    likelihood_score: string;
+    remediation_score: string;
+    [key: string]: string | number | boolean | null | undefined;
+  }
+
+  const { data, setData, put, errors } = useForm<VulnerabilityEditFormData>({
     id: vulnerability.id,
     project_id: vulnerability.project_id.toString(),
     name: vulnerability.name,
@@ -56,6 +91,9 @@ export function EditVulnerabilityDialog({ vulnerability }: { vulnerability: Vuln
     cve: vulnerability.cve,
     recommendations: vulnerability.remediation || '',
     discovered_at: vulnerability.discovered_at ? new Date(vulnerability.discovered_at).toISOString().split('T')[0] : '',
+    impact_score: vulnerability.impact_score || '',
+    likelihood_score: vulnerability.likelihood_score || '',
+    remediation_score: vulnerability.remediation_score || '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -187,6 +225,71 @@ export function EditVulnerabilityDialog({ vulnerability }: { vulnerability: Vuln
                   onChange={handleChange}
                 />
                 {errors.cvss && <p className="text-red-500 text-sm">{errors.cvss}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="impact_score">Impact Score</Label>
+                <Select
+                  value={data.impact_score}
+                  onValueChange={(value) => handleSelectChange('impact_score', value)}
+                >
+                  <SelectTrigger id="impact_score">
+                    <SelectValue placeholder="Select impact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.impact_score && <p className="text-red-500 text-sm">{errors.impact_score}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="likelihood_score">Likelihood Score</Label>
+                <Select
+                  value={data.likelihood_score}
+                  onValueChange={(value) => handleSelectChange('likelihood_score', value)}
+                >
+                  <SelectTrigger id="likelihood_score">
+                    <SelectValue placeholder="Select likelihood" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.likelihood_score && <p className="text-red-500 text-sm">{errors.likelihood_score}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="remediation_score">Remediation Score</Label>
+                <Select
+                  value={data.remediation_score}
+                  onValueChange={(value) => handleSelectChange('remediation_score', value)}
+                >
+                  <SelectTrigger id="remediation_score">
+                    <SelectValue placeholder="Select remediation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.remediation_score && <p className="text-red-500 text-sm">{errors.remediation_score}</p>}
               </div>
             </div>
 
@@ -331,8 +434,29 @@ export function CreateVulnerabilityDialog() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [useTemplate, setUseTemplate] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const page = usePage<{ props: PageProps }>();
+  const pageProps = page.props as PageProps;
+  const templates = pageProps.templates || [];
 
-  const { data, setData, post, errors, reset } = useForm({
+  // Define the form data interface
+  interface VulnerabilityFormData {
+    project_id: string;
+    name: string;
+    description: string;
+    severity: string;
+    cvss: string;
+    cve: string;
+    recommendations: string;
+    discovered_at: string;
+    impact_score: string;
+    likelihood_score: string;
+    remediation_score: string;
+    [key: string]: string | number | boolean | null | undefined;
+  }
+
+  const { data, setData, post, errors, reset } = useForm<VulnerabilityFormData>({
     project_id: '',
     name: '',
     description: '',
@@ -341,6 +465,9 @@ export function CreateVulnerabilityDialog() {
     cve: '',
     recommendations: '',
     discovered_at: new Date().toISOString().split('T')[0],
+    impact_score: '',
+    likelihood_score: '',
+    remediation_score: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -350,6 +477,31 @@ export function CreateVulnerabilityDialog() {
 
   const handleSelectChange = (id: string, value: string) => {
     setData(id as any, value);
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    
+    if (templateId) {
+      // Find the selected template
+      const template = templates.find(t => t.id.toString() === templateId);
+      
+      if (template) {
+        // Pre-fill form with template data
+        setData({
+          ...data,
+          name: template.name,
+          description: template.description || '',
+          severity: template.severity ? template.severity.toLowerCase() : 'low',
+          cvss: template.cvss ? template.cvss.toString() : '',
+          cve: template.cve || '',
+          recommendations: template.remediation_steps || '',
+          impact_score: template.impact || '',
+          likelihood_score: template.likelihood_score || '',
+          remediation_score: template.remediation_score || '',
+        });
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -362,6 +514,8 @@ export function CreateVulnerabilityDialog() {
         setIsSubmitting(false);
         setIsOpen(false);
         reset();
+        setSelectedTemplate('');
+        setUseTemplate(false);
         toast.success('Vulnerability created successfully!');
       },
       onError: (err) => {
@@ -396,6 +550,42 @@ export function CreateVulnerabilityDialog() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {templates.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="use-template"
+                    checked={useTemplate}
+                    onChange={(e) => setUseTemplate(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="use-template">Use a vulnerability template</Label>
+                </div>
+                
+                {useTemplate && (
+                  <div className="mt-3">
+                    <Label htmlFor="template-select">Select Template</Label>
+                    <Select
+                      value={selectedTemplate}
+                      onValueChange={(value) => handleTemplateChange(value)}
+                    >
+                      <SelectTrigger id="template-select">
+                        <SelectValue placeholder="Select template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.map((template) => (
+                          <SelectItem key={template.id} value={template.id.toString()}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="project_id">Project</Label>
               <Select
@@ -406,7 +596,7 @@ export function CreateVulnerabilityDialog() {
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(usePage().props as PageProps).projects?.map((project) => (
+                  {pageProps.projects?.map((project) => (
                     <SelectItem key={project.id} value={project.id.toString()}>
                       {project.name} ({project.client_name})
                     </SelectItem>
@@ -471,6 +661,71 @@ export function CreateVulnerabilityDialog() {
                   onChange={handleChange}
                 />
                 {errors.cvss && <p className="text-red-500 text-sm">{errors.cvss}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="impact_score">Impact Score</Label>
+                <Select
+                  value={data.impact_score}
+                  onValueChange={(value) => handleSelectChange('impact_score', value)}
+                >
+                  <SelectTrigger id="impact_score">
+                    <SelectValue placeholder="Select impact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.impact_score && <p className="text-red-500 text-sm">{errors.impact_score}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="likelihood_score">Likelihood Score</Label>
+                <Select
+                  value={data.likelihood_score}
+                  onValueChange={(value) => handleSelectChange('likelihood_score', value)}
+                >
+                  <SelectTrigger id="likelihood_score">
+                    <SelectValue placeholder="Select likelihood" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.likelihood_score && <p className="text-red-500 text-sm">{errors.likelihood_score}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="remediation_score">Remediation Score</Label>
+                <Select
+                  value={data.remediation_score}
+                  onValueChange={(value) => handleSelectChange('remediation_score', value)}
+                >
+                  <SelectTrigger id="remediation_score">
+                    <SelectValue placeholder="Select remediation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.remediation_score && <p className="text-red-500 text-sm">{errors.remediation_score}</p>}
               </div>
             </div>
 
@@ -567,6 +822,7 @@ export default function VulnerabilitiesIndex() {
   const formattedVulnerabilities = vulnerabilities.map(vulnerability => ({
     id: vulnerability.id,
     project_id: vulnerability.project_id,
+    client_id: vulnerability.client_id,
     project_name: vulnerability.project_name,
     client_name: vulnerability.client_name,
     name: vulnerability.name,
@@ -576,6 +832,9 @@ export default function VulnerabilitiesIndex() {
     cvss: vulnerability.cvss,
     remediation: vulnerability.remediation,
     discovered_at: vulnerability.discovered_at,
+    impact_score: vulnerability.impact_score,
+    likelihood_score: vulnerability.likelihood_score,
+    remediation_score: vulnerability.remediation_score,
   }));
   
   return (

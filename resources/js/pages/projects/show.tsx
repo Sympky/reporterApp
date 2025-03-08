@@ -45,6 +45,9 @@ type Vulnerability = {
   proof_of_concept: string | null;
   affected_components: string | null;
   notes: string | null;
+  impact_score: string | null;
+  likelihood_score: string | null;
+  remediation_score: string | null;
 };
 
 interface PageProps {
@@ -154,6 +157,9 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
     affected_components: '',
     notes: '',
     discovered_at: new Date().toISOString().split('T')[0],
+    impact_score: '',
+    likelihood_score: '',
+    remediation_score: '',
   });
 
   const handleTemplateChange = (templateId: string) => {
@@ -173,6 +179,9 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
           remediation_steps: template.remediation_steps || '',
           notes: template.notes || '',
           discovered_at: data.discovered_at,
+          impact_score: template.impact_score || '',
+          likelihood_score: template.likelihood_score || '',
+          remediation_score: template.remediation_score || '',
         });
       }
     }
@@ -324,7 +333,7 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
                 id="status"
                 value={data.status}
                 onChange={(e) => setData('status', e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="open">Open</option>
                 <option value="in progress">In Progress</option>
@@ -334,6 +343,59 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
               {errors.status && (
                 <div className="text-sm text-red-500">{errors.status}</div>
               )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="impact_score">Impact Score</Label>
+                <select
+                  id="impact_score"
+                  value={data.impact_score}
+                  onChange={(e) => setData('impact_score', e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">None</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                  <option value="info">Info</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="likelihood_score">Likelihood Score</Label>
+                <select
+                  id="likelihood_score"
+                  value={data.likelihood_score}
+                  onChange={(e) => setData('likelihood_score', e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">None</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                  <option value="info">Info</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="remediation_score">Remediation Score</Label>
+                <select
+                  id="remediation_score"
+                  value={data.remediation_score}
+                  onChange={(e) => setData('remediation_score', e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">None</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                  <option value="info">Info</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-2">

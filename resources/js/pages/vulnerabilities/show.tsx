@@ -24,6 +24,9 @@ type Vulnerability = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  impact_score: string | null;
+  likelihood_score: string | null;
+  remediation_score: string | null;
 };
 
 type Project = {
@@ -188,6 +191,39 @@ export default function ShowVulnerability({ vulnerability, project, client }: Pa
                       </Link>
                     </dd>
                   </div>
+                  
+                  {vulnerability.impact_score && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Impact Score</dt>
+                      <dd className="mt-1">
+                        <Badge variant={getSeverityBadgeVariant(vulnerability.impact_score)}>
+                          {vulnerability.impact_score}
+                        </Badge>
+                      </dd>
+                    </div>
+                  )}
+                  
+                  {vulnerability.likelihood_score && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Likelihood Score</dt>
+                      <dd className="mt-1">
+                        <Badge variant={getSeverityBadgeVariant(vulnerability.likelihood_score)}>
+                          {vulnerability.likelihood_score}
+                        </Badge>
+                      </dd>
+                    </div>
+                  )}
+                  
+                  {vulnerability.remediation_score && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Remediation Score</dt>
+                      <dd className="mt-1">
+                        <Badge variant={getSeverityBadgeVariant(vulnerability.remediation_score)}>
+                          {vulnerability.remediation_score}
+                        </Badge>
+                      </dd>
+                    </div>
+                  )}
                   
                   {vulnerability.cvss !== null && vulnerability.cvss !== undefined && (
                     <div>
