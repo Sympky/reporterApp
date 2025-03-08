@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import NotesComponent from '@/components/notes-component';
+import FileUploader from '@/components/file-uploader';
 
 // Define the types for Client and Project
 type Client = {
@@ -374,6 +375,14 @@ export default function ClientShow({ client, projects }: PageProps) {
             notableType="client"
             notableId={client.id}
             title="Client Notes"
+          />
+        </div>
+        
+        <div className="mt-6">
+          <FileUploader 
+            fileableType="client"
+            fileableId={client.id}
+            title="Client Files"
           />
         </div>
       </div>

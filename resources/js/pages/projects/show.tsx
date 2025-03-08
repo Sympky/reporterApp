@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import NotesComponent from '@/components/notes-component';
+import FileUploader from '@/components/file-uploader';
 
 // Define types for Project, Client, and Vulnerability
 type Client = {
@@ -575,6 +576,14 @@ export default function ProjectShow({ project, vulnerabilities, templates = [] }
             />
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <FileUploader 
+            fileableType="project"
+            fileableId={project.id}
+            title="Project Files"
+          />
+        </div>
       </div>
     </AppLayout>
   );

@@ -11,6 +11,7 @@ import { FormEvent, useState } from 'react';
 import { useEffect } from 'react';
 import { type BreadcrumbItem } from '@/types';
 import { ChevronLeft } from 'lucide-react';
+import FileUploader from '@/components/file-uploader';
 
 // Type definitions
 type Vulnerability = {
@@ -281,6 +282,14 @@ export default function EditVulnerability({ vulnerability, project, client }: Pa
               </form>
             </CardContent>
           </Card>
+          
+          <div className="mt-6">
+            <FileUploader 
+              fileableType="vulnerability" 
+              fileableId={vulnerability.id} 
+              title="Vulnerability Files"
+            />
+          </div>
         </div>
       </div>
     </AppLayout>

@@ -59,6 +59,14 @@ class Project extends Model
     }
 
     /**
+     * Get all of the project's files.
+     */
+    public function files(): MorphMany
+    {
+        return $this->morphMany(File::class, 'fileable')->orderBy('created_at', 'desc');
+    }
+
+    /**
      * Get the user who created the project.
      */
     public function createdBy(): BelongsTo

@@ -6,6 +6,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\VulnerabilityController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\FileController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -42,6 +43,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('notes', [NoteController::class, 'store'])->name('notes.store');
     Route::get('notes', [NoteController::class, 'getNotes'])->name('notes.get');
     Route::delete('notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
+
+    // Files routes
+    Route::post('files/upload', [FileController::class, 'upload'])->name('files.upload');
+    Route::get('files', [FileController::class, 'getFiles'])->name('files.get');
+    Route::get('files/{file}/download', [FileController::class, 'download'])->name('files.download');
+    Route::delete('files/{file}', [FileController::class, 'destroy'])->name('files.destroy');
 });
 
 require __DIR__.'/settings.php';

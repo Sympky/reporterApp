@@ -61,4 +61,12 @@ class Client extends Model
     {
         return $this->morphMany(Note::class, 'notable')->orderBy('created_at', 'desc');
     }
+
+    /**
+     * Get all of the client's files.
+     */
+    public function files(): MorphMany
+    {
+        return $this->morphMany(File::class, 'fileable')->orderBy('created_at', 'desc');
+    }
 }

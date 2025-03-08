@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { type BreadcrumbItem } from '@/types';
 import { ChevronLeft, PencilIcon } from 'lucide-react';
 import NotesComponent from '@/components/notes-component';
+import FileUploader from '@/components/file-uploader';
 
 // Type definitions
 type Vulnerability = {
@@ -222,6 +223,15 @@ export default function ShowVulnerability({ vulnerability, project, client }: Pa
             notableType="vulnerability"
             notableId={vulnerability.id}
             title="Vulnerability Notes"
+          />
+        </div>
+        
+        <div className="mt-6">
+          <FileUploader 
+            fileableType="vulnerability"
+            fileableId={vulnerability.id}
+            title="Vulnerability Files"
+            allowedFileTypes=".jpg,.jpeg,.png,.pdf,.txt,.doc,.docx,.xls,.xlsx,.zip,.rar"
           />
         </div>
       </div>
