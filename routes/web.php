@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\VulnerabilityController;
+use App\Http\Controllers\VulnerabilityTemplateController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\MethodologyController;
@@ -32,10 +33,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('vulnerabilities', VulnerabilityController::class)->except(['index', 'store']);
 
     // Vulnerability templates routes
-    Route::get('vulnerability-templates', [VulnerabilityController::class, 'templates'])->name('vulnerability.templates');
-    Route::post('vulnerability-templates', [VulnerabilityController::class, 'storeTemplate'])->name('vulnerability.templates.store');
-    Route::put('vulnerability-templates/{template}', [VulnerabilityController::class, 'updateTemplate'])->name('vulnerability.templates.update');
-    Route::post('vulnerability-templates/apply', [VulnerabilityController::class, 'applyTemplate'])->name('vulnerability.templates.apply');
+    Route::get('vulnerability-templates', [VulnerabilityTemplateController::class, 'index'])->name('vulnerability.templates');
+    Route::post('vulnerability-templates', [VulnerabilityTemplateController::class, 'store'])->name('vulnerability.templates.store');
+    Route::get('vulnerability-templates/{template}/edit', [VulnerabilityTemplateController::class, 'edit'])->name('vulnerability.templates.edit');
+    Route::put('vulnerability-templates/{template}', [VulnerabilityTemplateController::class, 'update'])->name('vulnerability.templates.update');
+    Route::post('vulnerability-templates/apply', [VulnerabilityTemplateController::class, 'apply'])->name('vulnerability.templates.apply');
+    Route::delete('vulnerability-templates/{template}', [VulnerabilityTemplateController::class, 'destroy'])->name('vulnerability.templates.destroy');
 
     // detailed project routes
     Route::get('projects/{project}/vulnerabilities', [ProjectController::class, 'vulnerabilities']);
