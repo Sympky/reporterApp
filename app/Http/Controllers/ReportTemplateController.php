@@ -48,15 +48,15 @@ class ReportTemplateController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Store the template file
+        // Store the template file in the public disk
         $file = $request->file('template_file');
-        $path = $file->store('templates');
-
-        // Create the template record
+        $path = $file->store('templates', 'public'); // Use public disk
+        
+        // Create the template record with public disk prefix
         $template = new ReportTemplate();
         $template->name = $request->name;
         $template->description = $request->description;
-        $template->file_path = $path;
+        $template->file_path = 'public/' . $path; // Add disk prefix
         $template->created_by = Auth::id();
         $template->save();
 
@@ -102,14 +102,23 @@ class ReportTemplateController extends Controller
         // Update the template file if provided
         if ($request->hasFile('template_file')) {
             // Delete the old file
-            if (Storage::exists($reportTemplate->file_path)) {
-                Storage::delete($reportTemplate->file_path);
+            // Extract disk from path
+            $path = $reportTemplate->file_path;
+            $disk = 'local';
+            
+            if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+                $disk = $matches[1];
+                $path = $matches[2];
+            }
+            
+            if (Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
             }
 
-            // Store the new file
+            // Store the new file in public disk
             $file = $request->file('template_file');
-            $path = $file->store('templates');
-            $reportTemplate->file_path = $path;
+            $newPath = $file->store('templates', 'public');
+            $reportTemplate->file_path = 'public/' . $newPath; // Add disk prefix
         }
 
         // Update the template record
@@ -128,8 +137,17 @@ class ReportTemplateController extends Controller
     public function destroy(ReportTemplate $reportTemplate)
     {
         // Delete the template file
-        if (Storage::exists($reportTemplate->file_path)) {
-            Storage::delete($reportTemplate->file_path);
+        // Extract disk from path
+        $path = $reportTemplate->file_path;
+        $disk = 'local';
+        
+        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+            $disk = $matches[1];
+            $path = $matches[2];
+        }
+        
+        if (Storage::disk($disk)->exists($path)) {
+            Storage::disk($disk)->delete($path);
         }
 
         // Delete the template record
@@ -144,10 +162,39 @@ class ReportTemplateController extends Controller
      */
     public function download(ReportTemplate $reportTemplate)
     {
-        if (!Storage::exists($reportTemplate->file_path)) {
-            return redirect()->back()->with('error', 'Template file not found.');
+        try {
+            // Extract disk from path
+            $path = $reportTemplate->file_path;
+            $disk = 'local';
+            
+            if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+                $disk = $matches[1];
+                $path = $matches[2];
+            }
+            
+            if (!Storage::disk($disk)->exists($path)) {
+                return redirect()->back()->with('error', 'Template file not found.');
+            }
+            
+            // Get full path to file
+            $fullPath = Storage::disk($disk)->path($path);
+            
+            // Create filename for download
+            $fileName = $reportTemplate->name . '.docx';
+            
+            // Return download response
+            return response()->download(
+                $fullPath, 
+                $fileName, 
+                [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                    'Pragma' => 'no-cache',
+                ]
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Template download error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error downloading template: ' . $e->getMessage());
         }
-
-        return Storage::download($reportTemplate->file_path, $reportTemplate->name . '.docx');
     }
 }

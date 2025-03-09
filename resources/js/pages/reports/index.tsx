@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,20 +13,21 @@ import { type BreadcrumbItem } from '@/types';
 interface Report {
   id: number;
   name: string;
-  client: {
+  client?: {
     id: number;
     name: string;
-  };
-  project: {
+  } | null;
+  project?: {
     id: number;
     name: string;
-  };
-  reportTemplate: {
+  } | null;
+  reportTemplate?: {
     id: number;
     name: string;
-  };
+  } | null;
   status: string;
   generated_file_path: string | null;
+  file_exists?: boolean;
   created_at: string;
 }
 
@@ -37,9 +38,24 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ];
 
-export default function Index({ reports }: { reports: Report[] }) {
+export default function Index({ reports, error }: { reports: Report[], error: any }) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const { csrf_token } = usePage().props as any;
   
+  // Debug logging
+  console.log('Reports data received:', reports);
+  console.log('Reports count:', reports?.length || 0);
+  console.log('Error:', error);
+  
+  // Ensure reports is always an array
+  const safeReports = Array.isArray(reports) ? reports : [];
+  
+  // Function to handle file download
+  const downloadReport = (reportId: number) => {
+    // Open in a new window which will force download
+    window.open(`/reports/${reportId}/download`, '_blank');
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
@@ -63,10 +79,8 @@ export default function Index({ reports }: { reports: Report[] }) {
     router.post(route('reports.regenerate', reportId));
   };
   
-  // Check if the reports array has any items without required relationships
-  const hasIncompleteReports = reports.some(
-    report => !report.client || !report.project || !report.reportTemplate
-  );
+  // Check if the reports array is empty
+  const isLoading = safeReports.length === 0;
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -90,7 +104,7 @@ export default function Index({ reports }: { reports: Report[] }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {reports.length === 0 ? (
+            {isLoading ? (
               <div className="text-center py-12">
                 <FileTextIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold text-gray-900">No reports</h3>
@@ -103,10 +117,6 @@ export default function Index({ reports }: { reports: Report[] }) {
                     </Button>
                   </Link>
                 </div>
-              </div>
-            ) : hasIncompleteReports ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Loading report data...</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -123,27 +133,29 @@ export default function Index({ reports }: { reports: Report[] }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reports.map((report) => (
+                    {safeReports.map((report) => (
                       <TableRow key={report.id}>
                         <TableCell className="font-medium">
                           <Link href={route('reports.show', report.id)} className="hover:underline">
                             {report.name}
                           </Link>
                         </TableCell>
-                        <TableCell>{report.client?.name || 'Unknown client'}</TableCell>
-                        <TableCell>{report.project?.name || 'Unknown project'}</TableCell>
-                        <TableCell>{report.reportTemplate?.name || 'Unknown template'}</TableCell>
+                        <TableCell>{report.client?.name ?? 'Unknown client'}</TableCell>
+                        <TableCell>{report.project?.name ?? 'Unknown project'}</TableCell>
+                        <TableCell>{report.reportTemplate?.name ?? 'Unknown template'}</TableCell>
                         <TableCell>{getStatusBadge(report.status)}</TableCell>
                         <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
-                            {report.generated_file_path && (
-                              <Link href={route('reports.download', report.id)}>
-                                <Button variant="outline" size="sm">
-                                  <DownloadIcon className="w-4 h-4" />
-                                  <span className="sr-only">Download</span>
-                                </Button>
-                              </Link>
+                            {report.file_exists && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => downloadReport(report.id)}
+                              >
+                                <DownloadIcon className="w-4 h-4" />
+                                <span className="sr-only">Download</span>
+                              </Button>
                             )}
                             <Button 
                               variant="outline" 

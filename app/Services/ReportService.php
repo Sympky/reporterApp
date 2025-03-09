@@ -11,6 +11,7 @@ use App\Models\Vulnerability;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ReportService
 {
@@ -122,21 +123,37 @@ class ReportService
     public function generateReportFile(Report $report): ?string
     {
         try {
+            $sessionId = Str::random(8);
+            Log::info("[ReportGen-{$sessionId}] Starting report generation for report ID: {$report->id}, Name: {$report->name}");
+            
             if (!$report->reportTemplate) {
-                Log::error('Report template not found for report ID: ' . $report->id);
+                Log::error("[ReportGen-{$sessionId}] Report template not found for report ID: {$report->id}");
                 return null;
             }
+            
+            Log::info("[ReportGen-{$sessionId}] Using template ID: {$report->reportTemplate->id}, Path: {$report->reportTemplate->file_path}");
             
             $docxService = new DocxGenerationService();
             $result = $docxService->generateReport($report);
             
             if (!$result) {
-                Log::error('Failed to generate report for report ID: ' . $report->id);
+                Log::error("[ReportGen-{$sessionId}] Failed to generate report for report ID: {$report->id}");
+                return null;
+            }
+            
+            Log::info("[ReportGen-{$sessionId}] Report generated successfully, file path: {$result}");
+            
+            // Verify the file exists after generation
+            if (!Storage::exists($result)) {
+                Log::error("[ReportGen-{$sessionId}] Generated file does not exist at path: {$result}");
+            } else {
+                $fileSize = Storage::size($result);
+                Log::info("[ReportGen-{$sessionId}] Generated file size: {$fileSize} bytes");
             }
             
             return $result;
         } catch (\Exception $e) {
-            Log::error('Error in generateReportFile: ' . $e->getMessage());
+            Log::error("[ReportGen-" . ($sessionId ?? 'unknown') . "] Error in generateReportFile: " . $e->getMessage());
             Log::error($e->getTraceAsString());
             return null;
         }

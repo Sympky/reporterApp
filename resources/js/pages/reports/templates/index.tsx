@@ -41,6 +41,12 @@ export default function Index({ templates }: { templates: Template[] }) {
     }
   };
 
+  // Function to handle template download
+  const downloadTemplate = (templateId: number) => {
+    // Open in a new window which will force download
+    window.open(`/report-templates/${templateId}/download`, '_blank');
+  };
+
   // Check if any templates have missing creator information
   const hasIncompleteTemplates = templates.some(
     template => !template.created_by
@@ -97,12 +103,14 @@ export default function Index({ templates }: { templates: Template[] }) {
                 <Separator />
                 <CardFooter className="flex justify-between py-4">
                   <div className="flex space-x-2">
-                    <Link href={route('report-templates.download', template.id)}>
-                      <Button variant="outline" size="sm">
-                        <DownloadIcon className="w-4 h-4 mr-2" />
-                        Download
-                      </Button>
-                    </Link>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => downloadTemplate(template.id)}
+                    >
+                      <DownloadIcon className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
                     <Link href={route('report-templates.edit', template.id)}>
                       <Button variant="outline" size="sm">
                         <PencilIcon className="w-4 h-4 mr-2" />

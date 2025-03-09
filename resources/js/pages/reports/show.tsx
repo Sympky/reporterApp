@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeftIcon, DownloadIcon, PencilIcon, RefreshCwIcon, Clipboard, CheckCircle } from 'lucide-react';
@@ -57,6 +57,7 @@ interface Report {
   status: string;
   executive_summary: string;
   generated_file_path: string | null;
+  file_exists?: boolean;
   created_at: string;
   methodologies: Methodology[];
   findings: Vulnerability[];
@@ -70,6 +71,7 @@ export default function Show({ report }: { report: Report }) {
   const [activeTab, setActiveTab] = useState('summary');
   const [regenerating, setRegenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { csrf_token } = usePage().props as any;
   
   const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -127,6 +129,14 @@ export default function Show({ report }: { report: Report }) {
     );
   };
 
+  // Function to handle file download
+  const downloadReport = () => {
+    if (!report?.id) return;
+    
+    // Open in a new window which will force download
+    window.open(`/reports/${report.id}/download`, '_blank');
+  };
+
   // If report is not fully loaded, show a loading state
   if (!report || !report.client || !report.project || !report.reportTemplate) {
     return (
@@ -163,13 +173,15 @@ export default function Show({ report }: { report: Report }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {report.generated_file_path && (
-              <Link href={route('reports.download', report.id)}>
-                <Button variant="outline" className="flex items-center">
-                  <DownloadIcon className="w-4 h-4 mr-2" />
-                  Download Report
-                </Button>
-              </Link>
+            {report.file_exists && (
+              <Button 
+                variant="primary" 
+                className="flex items-center"
+                onClick={downloadReport}
+              >
+                <DownloadIcon className="w-4 h-4 mr-2" />
+                Download Report
+              </Button>
             )}
             <Button 
               variant="outline" 
@@ -189,182 +201,144 @@ export default function Show({ report }: { report: Report }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Report Summary</CardTitle>
+            <CardDescription>
+              Basic information about this report
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Client</dt>
+                <dd className="text-lg">{report.client.name}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Project</dt>
+                <dd className="text-lg">{report.project.name}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Template</dt>
+                <dd className="text-lg">{report.reportTemplate.name}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Status</dt>
+                <dd className="text-lg">{getStatusBadge(report.status)}</dd>
+              </div>
+              <div className="md:col-span-2">
+                <dt className="text-sm font-medium text-gray-500">Executive Summary</dt>
+                <dd className="mt-1 text-base whitespace-pre-wrap border p-3 rounded-md bg-gray-50">
+                  {report.executive_summary || 'No executive summary provided.'}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Client</CardTitle>
+            <CardHeader>
+              <CardTitle>Methodologies</CardTitle>
+              <CardDescription>
+                Testing methodologies included in this report
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-xl font-medium">{report.client.name}</p>
+              {report.methodologies && report.methodologies.length > 0 ? (
+                <div className="space-y-4">
+                  {report.methodologies.map((methodology) => (
+                    <div key={methodology.id} className="border rounded-md p-4">
+                      <h3 className="font-medium text-lg">{methodology.title}</h3>
+                      <p className="mt-2 text-sm whitespace-pre-wrap">{methodology.content}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No methodologies included in this report.</p>
+              )}
             </CardContent>
           </Card>
+
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Project</CardTitle>
+            <CardHeader>
+              <CardTitle>Findings</CardTitle>
+              <CardDescription>
+                Vulnerabilities included in this report
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-xl font-medium">{report.project.name}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Template</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-medium">{report.reportTemplate.name}</p>
+              {report.findings && report.findings.length > 0 ? (
+                <div className="space-y-4">
+                  {report.findings.map((finding) => (
+                    <div key={finding.id} className="border rounded-md p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-medium text-lg">{finding.name}</h3>
+                        {getSeverityBadge(finding.severity)}
+                      </div>
+                      
+                      <div className="mt-2 space-y-2">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Description</h4>
+                          <p className="text-sm whitespace-pre-wrap">{finding.description}</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Impact</h4>
+                          <p className="text-sm whitespace-pre-wrap">{finding.impact}</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Recommendations</h4>
+                          <p className="text-sm whitespace-pre-wrap">{finding.recommendations}</p>
+                        </div>
+                        
+                        {finding.files && finding.files.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Evidence Files</h4>
+                            <ul className="list-disc list-inside text-sm">
+                              {finding.files.map(file => (
+                                <li key={file.id}>{file.original_name}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No findings included in this report.</p>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Contents</CardTitle>
-            <CardDescription>
-              {report.generated_file_path 
-                ? 'View the contents that were used to generate this report.' 
-                : 'Configure and generate a report file using this data.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 mb-6">
-                <TabsTrigger value="summary">Executive Summary</TabsTrigger>
-                <TabsTrigger value="methodologies">Methodologies ({report.methodologies?.length || 0})</TabsTrigger>
-                <TabsTrigger value="findings">Findings ({report.findings?.length || 0})</TabsTrigger>
-              </TabsList>
-              
-              {/* Executive Summary Tab */}
-              <TabsContent value="summary">
-                <div className="relative">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="absolute right-2 top-2"
-                    onClick={() => copyToClipboard(report.executive_summary || '')}
-                  >
-                    {copied ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Clipboard className="h-4 w-4" />
-                    )}
-                  </Button>
-                  {report.executive_summary ? (
-                    <div className="prose max-w-none p-4 border rounded-md">
-                      <p className="whitespace-pre-line">{report.executive_summary}</p>
-                    </div>
-                  ) : (
-                    <div className="p-4 border rounded-md text-gray-500 italic">
-                      No executive summary provided.
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-              
-              {/* Methodologies Tab */}
-              <TabsContent value="methodologies">
-                {!report.methodologies || report.methodologies.length === 0 ? (
-                  <div className="text-center py-6 border rounded-md">
-                    <p className="text-gray-500">No methodologies included in this report.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {report.methodologies
-                      .sort((a, b) => (a.pivot?.order || 0) - (b.pivot?.order || 0))
-                      .map((methodology) => (
-                        <Card key={methodology.id}>
-                          <CardHeader>
-                            <CardTitle className="text-lg">{methodology.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="prose max-w-none">
-                              <p className="whitespace-pre-line">{methodology.content}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                )}
-              </TabsContent>
-              
-              {/* Findings Tab */}
-              <TabsContent value="findings">
-                {!report.findings || report.findings.length === 0 ? (
-                  <div className="text-center py-6 border rounded-md">
-                    <p className="text-gray-500">No findings included in this report.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {report.findings
-                      .sort((a, b) => (a.pivot?.order || 0) - (b.pivot?.order || 0))
-                      .map((vulnerability) => (
-                        <Card key={vulnerability.id}>
-                          <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg">{vulnerability.name}</CardTitle>
-                              {getSeverityBadge(vulnerability.severity)}
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div>
-                              <h4 className="font-medium mb-2">Description</h4>
-                              <p className="text-gray-700 whitespace-pre-line">{vulnerability.description}</p>
-                            </div>
-                            
-                            <Separator />
-                            
-                            <div>
-                              <h4 className="font-medium mb-2">Impact</h4>
-                              <p className="text-gray-700 whitespace-pre-line">{vulnerability.impact}</p>
-                            </div>
-                            
-                            <Separator />
-                            
-                            <div>
-                              <h4 className="font-medium mb-2">Recommendations</h4>
-                              <p className="text-gray-700 whitespace-pre-line">{vulnerability.recommendations}</p>
-                            </div>
-                            
-                            {vulnerability.files && vulnerability.files.length > 0 && vulnerability.pivot?.include_evidence && (
-                              <>
-                                <Separator />
-                                
-                                <div>
-                                  <h4 className="font-medium mb-2">Evidence Files</h4>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>File Name</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {vulnerability.files.map((file) => (
-                                        <TableRow key={file.id}>
-                                          <TableCell>{file.original_name}</TableCell>
-                                          <TableCell className="text-right">
-                                            <Link href={route('files.download', file.id)}>
-                                              <Button variant="outline" size="sm">
-                                                <DownloadIcon className="h-4 w-4" />
-                                                <span className="sr-only">Download</span>
-                                              </Button>
-                                            </Link>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+        {report.generated_file_path ? (
+          <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+            <div className="flex">
+              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+              <div>
+                <h3 className="text-green-800 font-medium">Report file available</h3>
+                <p className="text-green-700 text-sm">
+                  A report file has been generated. You can download it using the download button above.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+            <div className="flex">
+              <RefreshCwIcon className="h-5 w-5 text-yellow-500 mr-2" />
+              <div>
+                <h3 className="text-yellow-800 font-medium">Report file not generated</h3>
+                <p className="text-yellow-700 text-sm">
+                  The report file hasn't been generated yet or generation failed. Click the "Regenerate" button to create the report file.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

@@ -28,17 +28,22 @@ class DocxGenerationService
             }
 
             // Create temp directory if it doesn't exist
-            $tempDirPath = storage_path('app/temp');
-            if (!file_exists($tempDirPath)) {
-                mkdir($tempDirPath, 0755, true);
+            $tempDir = 'temp';
+            if (!Storage::exists($tempDir)) {
+                Storage::makeDirectory($tempDir);
             }
 
             // Define the temporary file path
-            $tempTemplatePath = $tempDirPath . '/' . basename($templatePath);
+            $tempFileName = basename($templatePath);
+            $tempFilePath = $tempDir . '/' . $tempFileName;
             
-            // Get the template content and save it to the temporary location
-            $templateContent = Storage::get($templatePath);
-            file_put_contents($tempTemplatePath, $templateContent);
+            // Copy the template to the temp directory
+            if (!Storage::copy($templatePath, $tempFilePath)) {
+                throw new \Exception("Failed to copy template file to temp directory");
+            }
+            
+            // Get the full path to the temporary file
+            $tempTemplatePath = Storage::path($tempFilePath);
             
             // Verify the file was created
             if (!file_exists($tempTemplatePath)) {
@@ -112,38 +117,63 @@ class DocxGenerationService
 
             // Generate a unique filename for the report
             $fileName = 'report_' . Str::slug($report->name) . '_' . time() . '.docx';
+            
+            // Store the file in the public disk's reports directory
+            $disk = 'public'; // Use the public disk explicitly
             $saveDirectory = 'reports';
             $savePath = $saveDirectory . '/' . $fileName;
             
-            // Ensure the reports directory exists in storage
-            $storageReportsDirPath = storage_path('app/' . $saveDirectory);
-            if (!file_exists($storageReportsDirPath)) {
-                mkdir($storageReportsDirPath, 0755, true);
+            // Log the paths for debugging
+            Log::info("Saving report file in public disk, directory: {$saveDirectory}, Path: {$savePath}");
+            
+            // Ensure the reports directory exists in the public disk
+            if (!Storage::disk($disk)->exists($saveDirectory)) {
+                Log::info("Creating directory: {$saveDirectory} in {$disk} disk");
+                Storage::disk($disk)->makeDirectory($saveDirectory);
+            }
+
+            // Get the storage directory's real path
+            $storagePath = storage_path('app/public/' . $saveDirectory);
+            if (!is_dir($storagePath)) {
+                mkdir($storagePath, 0755, true);
+                Log::info("Created physical directory: {$storagePath}");
             }
 
             // Full path to save the document
-            $fullSavePath = storage_path('app/' . $savePath);
+            $fullSavePath = storage_path('app/public/' . $savePath);
+            Log::info("Full save path: {$fullSavePath}");
             
             // Save the document
             $templateProcessor->saveAs($fullSavePath);
             
             // Verify the file was created
             if (!file_exists($fullSavePath)) {
+                Log::error("Failed to save generated report file: {$fullSavePath}");
                 throw new \Exception("Failed to save generated report file: {$fullSavePath}");
+            } else {
+                Log::info("File successfully saved at: {$fullSavePath}");
+                Log::info("File size: " . filesize($fullSavePath) . " bytes");
+                
+                // Set proper file permissions
+                chmod($fullSavePath, 0644);
+                Log::info("File permissions set to 0644");
             }
             
             // Clean up the temporary file
-            if (file_exists($tempTemplatePath)) {
-                unlink($tempTemplatePath);
+            if (Storage::exists($tempFilePath)) {
+                Storage::delete($tempFilePath);
             }
 
-            // Update the report with the file path
-            $report->generated_file_path = $savePath;
+            // Update the report with the file path and disk info
+            // Store the complete path including the disk prefix
+            $report->generated_file_path = 'public/' . $savePath;
             $report->status = 'generated';
             $report->updated_by = Auth::id();
             $report->save();
+            
+            Log::info("Report record updated with file path: public/{$savePath}");
 
-            return $savePath;
+            return 'public/' . $savePath;
         } catch (\Exception $e) {
             Log::error('Error generating report: ' . $e->getMessage());
             return null;

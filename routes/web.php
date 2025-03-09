@@ -78,7 +78,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('reports/{report}', [ReportController::class, 'update'])->name('reports.update');
     Route::delete('reports/{report}', [ReportController::class, 'destroy'])->name('reports.destroy');
     Route::get('reports/{report}/download', [ReportController::class, 'download'])->name('reports.download');
+    Route::get('reports/{report}/direct-download', [ReportController::class, 'directDownload'])->name('reports.direct-download');
     Route::post('reports/{report}/regenerate', [ReportController::class, 'regenerate'])->name('reports.regenerate');
+    
+    // Debug route - remove in production
+    Route::get('reports-debug', [ReportController::class, 'debug'])->name('reports.debug');
 });
 
 require __DIR__.'/settings.php';
