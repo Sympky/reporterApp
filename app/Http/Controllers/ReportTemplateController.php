@@ -50,13 +50,13 @@ class ReportTemplateController extends Controller
 
         // Store the template file in the public disk
         $file = $request->file('template_file');
-        $path = $file->store('templates', 'public'); // Use public disk
+        $path = $file->store('templates', 'public'); // Use just 'templates' to avoid double storage
         
-        // Create the template record with public disk prefix
+        // Create the template record with correct path
         $template = new ReportTemplate();
         $template->name = $request->name;
         $template->description = $request->description;
-        $template->file_path = 'public/' . $path; // Add disk prefix
+        $template->file_path = 'public/storage/templates/' . basename($path); // Store with consistent path format
         $template->created_by = Auth::id();
         $template->save();
 
@@ -117,8 +117,8 @@ class ReportTemplateController extends Controller
 
             // Store the new file in public disk
             $file = $request->file('template_file');
-            $newPath = $file->store('templates', 'public');
-            $reportTemplate->file_path = 'public/' . $newPath; // Add disk prefix
+            $newPath = $file->store('templates', 'public'); // Use just 'templates' to avoid double storage
+            $reportTemplate->file_path = 'public/storage/templates/' . basename($newPath); // Store with consistent path format
         }
 
         // Update the template record

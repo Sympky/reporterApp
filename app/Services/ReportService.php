@@ -144,7 +144,25 @@ class ReportService
             Log::info("[ReportGen-{$sessionId}] Report generated successfully, file path: {$result}");
             
             // Verify the file exists after generation
-            if (!Storage::exists($result)) {
+            if (strpos($result, 'public/') === 0) {
+                // Extract the path relative to the public disk
+                $relativePath = substr($result, 7); // Remove 'public/'
+                $fileExists = Storage::disk('public')->exists($relativePath);
+                
+                if (!$fileExists) {
+                    Log::error("[ReportGen-{$sessionId}] Generated file does not exist at path: {$result}");
+                    Log::info("[ReportGen-{$sessionId}] Checking with full path: " . storage_path('app/' . $result));
+                    
+                    if (file_exists(storage_path('app/' . $result))) {
+                        Log::info("[ReportGen-{$sessionId}] File exists with full path check");
+                        $fileSize = filesize(storage_path('app/' . $result));
+                        Log::info("[ReportGen-{$sessionId}] Generated file size: {$fileSize} bytes");
+                    }
+                } else {
+                    $fileSize = Storage::disk('public')->size($relativePath);
+                    Log::info("[ReportGen-{$sessionId}] Generated file size: {$fileSize} bytes");
+                }
+            } else if (!Storage::exists($result)) {
                 Log::error("[ReportGen-{$sessionId}] Generated file does not exist at path: {$result}");
             } else {
                 $fileSize = Storage::size($result);
