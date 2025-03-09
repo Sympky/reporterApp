@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Methodology extends Model
+class ReportTemplate extends Model
 {
     use HasFactory;
 
@@ -17,24 +17,23 @@ class Methodology extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'title',
-        'content',
+        'name',
+        'file_path',
+        'description',
         'created_by',
         'updated_by',
     ];
 
     /**
-     * Get the reports that include this methodology.
+     * Get the reports using this template.
      */
-    public function reports(): BelongsToMany
+    public function reports(): HasMany
     {
-        return $this->belongsToMany(Report::class, 'report_methodologies')
-            ->withPivot('order')
-            ->withTimestamps();
+        return $this->hasMany(Report::class);
     }
 
     /**
-     * Get the user who created the methodology.
+     * Get the user who created the template.
      */
     public function createdBy(): BelongsTo
     {
@@ -42,7 +41,7 @@ class Methodology extends Model
     }
 
     /**
-     * Get the user who last updated the methodology.
+     * Get the user who last updated the template.
      */
     public function updatedBy(): BelongsTo
     {

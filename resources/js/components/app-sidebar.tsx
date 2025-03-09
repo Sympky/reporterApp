@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type NavItemChild, type NavItemGrandChild } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Bug, Folder, LayoutGrid, Package, UsersIcon } from 'lucide-react';
+import { BookOpen, Bug, Folder, LayoutGrid, Package, UsersIcon, FileTextIcon } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -89,7 +89,7 @@ export function AppSidebar() {
         };
     };
 
-    // Base navigation items
+    // Base navigation items that don't need special handling
     const baseNavItems: NavItem[] = [
         {
             title: 'Dashboard',
@@ -110,6 +110,28 @@ export function AppSidebar() {
             title: 'Vulnerability Templates',
             url: '/vulnerability-templates',
             icon: Bug,
+        },
+        {
+            title: 'Reports',
+            url: '/reports',
+            icon: FileTextIcon,
+            children: [
+                {
+                    id: 1,
+                    title: 'All Reports',
+                    url: '/reports',
+                },
+                {
+                    id: 2,
+                    title: 'New Report',
+                    url: '/reports/create',
+                },
+                {
+                    id: 3,
+                    title: 'Report Templates',
+                    url: '/report-templates',
+                },
+            ],
         },
     ];
 

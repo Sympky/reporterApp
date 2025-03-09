@@ -9,6 +9,8 @@ use App\Http\Controllers\VulnerabilityTemplateController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\MethodologyController;
+use App\Http\Controllers\ReportTemplateController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -56,6 +58,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Methodology routes
     Route::resource('methodologies', MethodologyController::class);
+});
+
+// Report Templates
+Route::middleware(['auth'])->group(function () {
+    Route::resource('report-templates', ReportTemplateController::class);
+    Route::get('report-templates/{reportTemplate}/download', [ReportTemplateController::class, 'download'])->name('report-templates.download');
+});
+
+// Reports
+Route::middleware(['auth'])->group(function () {
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/create', [ReportController::class, 'create'])->name('reports.create');
+    Route::post('reports/select-client-project', [ReportController::class, 'selectClientProject'])->name('reports.select-client-project');
+    Route::match(['get', 'post'], 'reports/add-details', [ReportController::class, 'addReportDetails'])->name('reports.add-details');
+    Route::post('reports', [ReportController::class, 'store'])->name('reports.store');
+    Route::get('reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+    Route::get('reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
+    Route::put('reports/{report}', [ReportController::class, 'update'])->name('reports.update');
+    Route::delete('reports/{report}', [ReportController::class, 'destroy'])->name('reports.destroy');
+    Route::get('reports/{report}/download', [ReportController::class, 'download'])->name('reports.download');
+    Route::post('reports/{report}/regenerate', [ReportController::class, 'regenerate'])->name('reports.regenerate');
 });
 
 require __DIR__.'/settings.php';
