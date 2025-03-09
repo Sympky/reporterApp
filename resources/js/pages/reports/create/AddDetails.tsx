@@ -151,20 +151,21 @@ export default function AddDetails({ template_id, client_id, project_id, methodo
   };
 
   const getSeverityBadge = (severity: string) => {
-    const severityColors: Record<string, string> = {
-      critical: 'bg-red-500',
-      high: 'bg-orange-500',
-      medium: 'bg-yellow-500',
-      low: 'bg-green-500',
-      info: 'bg-blue-500',
-    };
-
-    const bgColor = severityColors[severity.toLowerCase()] || 'bg-gray-500';
+    const lowerSeverity = severity.toLowerCase();
     
+    // Using Tailwind's arbitrary values for custom colors
     return (
-      <Badge className={`${bgColor} text-white`}>
+      <span className={`
+        inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
+        ${lowerSeverity === 'critical' ? 'bg-red-500 text-white' : ''}
+        ${lowerSeverity === 'high' ? 'bg-orange-500 text-white' : ''}
+        ${lowerSeverity === 'medium' ? 'bg-yellow-500 text-white' : ''}
+        ${lowerSeverity === 'low' ? 'bg-green-500 text-black' : ''}
+        ${lowerSeverity === 'info' ? 'bg-blue-500 text-black' : ''}
+        ${!['critical', 'high', 'medium', 'low', 'info'].includes(lowerSeverity) ? 'bg-gray-500 text-white' : ''}
+      `}>
         {severity.toUpperCase()}
-      </Badge>
+      </span>
     );
   };
 
@@ -384,7 +385,7 @@ export default function AddDetails({ template_id, client_id, project_id, methodo
                                           checked={getFindingIncludeEvidence(vulnerability.id)}
                                           onCheckedChange={() => toggleEvidenceInclusion(vulnerability.id)}
                                         />
-                                        <Label htmlFor={`evidence-${vulnerability.id}`} className="ml-2 cursor-pointer">
+                                        <Label htmlFor={`evidence-${vulnerability.id}`} className="ml-2 cursor-pointer text-black">
                                           Include evidence ({vulnerability.files.length} files)
                                         </Label>
                                       </div>
