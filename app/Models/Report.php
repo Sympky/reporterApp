@@ -26,6 +26,16 @@ class Report extends Model
         'generated_file_path',
         'created_by',
         'updated_by',
+        'generate_from_scratch',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'generate_from_scratch' => 'boolean',
     ];
 
     /**

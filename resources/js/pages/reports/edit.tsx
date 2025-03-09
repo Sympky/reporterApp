@@ -34,7 +34,7 @@ interface Vulnerability {
   description: string;
   impact: string;
   recommendations: string;
-  files: FileAttachment[];
+  files?: FileAttachment[];
   pivot?: {
     order: number;
     include_evidence: boolean;
@@ -404,9 +404,9 @@ export default function Edit({ report, methodologies, vulnerabilities }: Props) 
                                   </div>
                                   <p className="text-sm text-gray-500 mt-1">{vulnerability.description.substring(0, 100)}...</p>
                                   
-                                  {isVulnerabilitySelected(vulnerability.id) && vulnerability.files.length > 0 && (
+                                  {isVulnerabilitySelected(vulnerability.id) && vulnerability.files && vulnerability.files.length > 0 && (
                                     <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
-                                      <div className="flex items-center">
+                                      <div className="flex items-center text-gray-800">
                                         <Checkbox 
                                           id={`evidence-${vulnerability.id}`}
                                           checked={getFindingIncludeEvidence(vulnerability.id)}
@@ -439,7 +439,7 @@ export default function Edit({ report, methodologies, vulnerabilities }: Props) 
                                     <span className="text-gray-800">{index + 1}.</span>
                                     <span className="text-gray-800">{vulnerability.name}</span>
                                     {getSeverityBadge(vulnerability.severity)}
-                                    {finding.include_evidence && vulnerability.files.length > 0 && (
+                                    {finding.include_evidence && vulnerability.files && vulnerability.files.length > 0 && (
                                       <Badge variant="outline" className="text-xs text-gray-800">
                                         Evidence included
                                       </Badge>

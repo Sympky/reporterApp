@@ -25,12 +25,20 @@ class ReportService
     {
         $report = new Report();
         $report->name = $data['name'];
-        $report->report_template_id = $data['report_template_id'];
+        
+        // Only set report_template_id if not generating from scratch
+        if (empty($data['generate_from_scratch'])) {
+            $report->report_template_id = $data['report_template_id'] ?? null;
+        } else {
+            $report->report_template_id = null;
+        }
+        
         $report->client_id = $data['client_id'];
         $report->project_id = $data['project_id'];
         $report->executive_summary = $data['executive_summary'] ?? null;
         $report->status = 'draft';
         $report->created_by = Auth::id();
+        $report->generate_from_scratch = !empty($data['generate_from_scratch']);
         $report->save();
 
         // Attach methodologies if provided
@@ -122,16 +130,22 @@ class ReportService
      */
     public function generateReportFile(Report $report): ?string
     {
+        $sessionId = Str::uuid();
+        
         try {
-            $sessionId = Str::random(8);
-            Log::info("[ReportGen-{$sessionId}] Starting report generation for report ID: {$report->id}, Name: {$report->name}");
+            Log::info("[ReportGen-{$sessionId}] Starting report generation for report ID: {$report->id}");
             
-            if (!$report->reportTemplate) {
+            // Report templates are not needed when generate_from_scratch is true
+            if (!$report->generate_from_scratch && !$report->reportTemplate) {
                 Log::error("[ReportGen-{$sessionId}] Report template not found for report ID: {$report->id}");
                 return null;
             }
             
-            Log::info("[ReportGen-{$sessionId}] Using template ID: {$report->reportTemplate->id}, Path: {$report->reportTemplate->file_path}");
+            if (!$report->generate_from_scratch) {
+                Log::info("[ReportGen-{$sessionId}] Using template ID: {$report->reportTemplate->id}, Path: {$report->reportTemplate->file_path}");
+            } else {
+                Log::info("[ReportGen-{$sessionId}] Generating from scratch (without template)");
+            }
             
             $docxService = new DocxGenerationService();
             $result = $docxService->generateReport($report);
@@ -158,21 +172,15 @@ class ReportService
                         $fileSize = filesize(storage_path('app/' . $result));
                         Log::info("[ReportGen-{$sessionId}] Generated file size: {$fileSize} bytes");
                     }
-                } else {
-                    $fileSize = Storage::disk('public')->size($relativePath);
-                    Log::info("[ReportGen-{$sessionId}] Generated file size: {$fileSize} bytes");
                 }
-            } else if (!Storage::exists($result)) {
-                Log::error("[ReportGen-{$sessionId}] Generated file does not exist at path: {$result}");
-            } else {
-                $fileSize = Storage::size($result);
-                Log::info("[ReportGen-{$sessionId}] Generated file size: {$fileSize} bytes");
             }
             
             return $result;
         } catch (\Exception $e) {
-            Log::error("[ReportGen-" . ($sessionId ?? 'unknown') . "] Error in generateReportFile: " . $e->getMessage());
-            Log::error($e->getTraceAsString());
+            Log::error("[ReportGen-{$sessionId}] Exception during report generation: " . $e->getMessage(), [
+                'exception' => $e,
+                'report_id' => $report->id,
+            ]);
             return null;
         }
     }

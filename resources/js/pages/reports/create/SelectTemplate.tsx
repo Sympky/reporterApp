@@ -7,11 +7,18 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Template {
   id: number;
   name: string;
   description: string | null;
+}
+
+interface FormData {
+  template_id: string;
+  generate_from_scratch: boolean;
+  [key: string]: any; // Add index signature to satisfy Inertia's FormDataType constraint
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -28,13 +35,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function SelectTemplate({ templates }: { templates: Template[] }) {
   const [selected, setSelected] = useState<number | null>(null);
   
-  const { data, setData, post, processing, errors } = useForm({
+  const { data, setData, post, processing, errors } = useForm<FormData>({
     template_id: '',
+    generate_from_scratch: false,
   });
 
   const handleSelectTemplate = (templateId: string) => {
     setSelected(parseInt(templateId));
     setData('template_id', templateId);
+    
+    // If a template is selected, disable generate from scratch
+    if (templateId) {
+      setData('generate_from_scratch', false);
+    }
+  };
+
+  const handleGenerateFromScratch = (checked: boolean | 'indeterminate') => {
+    // Update the generate_from_scratch value
+    setData('generate_from_scratch', checked === true);
+    
+    // When "generate from scratch" is enabled, clear template selection
+    if (checked === true) {
+      setSelected(null);
+      setData('template_id', '');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,6 +133,29 @@ export default function SelectTemplate({ templates }: { templates: Template[] })
               {errors.template_id && (
                 <div className="text-red-500 text-sm mt-2">{errors.template_id}</div>
               )}
+
+              {/* Generate From Scratch Option */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-start space-x-2">
+                  <Checkbox 
+                    id="generate-from-scratch"
+                    checked={data.generate_from_scratch}
+                    onCheckedChange={handleGenerateFromScratch}
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="generate-from-scratch"
+                      className="text-base font-medium cursor-pointer"
+                    >
+                      Generate from scratch (recommended)
+                    </Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Use a direct generation method that creates a clean, reliable document without template processing issues.
+                      This option is more reliable if you've experienced corruption issues with template-based reports.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Link href={route('reports.index')}>
@@ -118,7 +165,7 @@ export default function SelectTemplate({ templates }: { templates: Template[] })
               </Link>
               <Button 
                 type="submit" 
-                disabled={processing || !selected}
+                disabled={processing || (!selected && !data.generate_from_scratch)}
                 className="flex items-center"
               >
                 Next Step

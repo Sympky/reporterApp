@@ -21,11 +21,12 @@ interface Project {
 
 interface Props {
   template_id: number;
+  generate_from_scratch?: boolean;
   clients: Client[];
   projects: Project[];
 }
 
-export default function SelectClientProject({ template_id, clients, projects }: Props) {
+export default function SelectClientProject({ template_id, generate_from_scratch = false, clients, projects }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
     {
       title: 'Reports',
@@ -44,9 +45,10 @@ export default function SelectClientProject({ template_id, clients, projects }: 
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   
   const { data, setData, post, processing, errors } = useForm({
-    template_id: template_id.toString(),
+    template_id: template_id?.toString() || '',
     client_id: '',
     project_id: '',
+    generate_from_scratch: generate_from_scratch,
   });
 
   useEffect(() => {
@@ -76,7 +78,8 @@ export default function SelectClientProject({ template_id, clients, projects }: 
     
     // Use post data but also include query parameters for better direct access
     const url = route('reports.add-details') + 
-      `?template_id=${data.template_id}&client_id=${data.client_id}&project_id=${data.project_id}`;
+      `?template_id=${data.template_id}&client_id=${data.client_id}&project_id=${data.project_id}` +
+      `&generate_from_scratch=${data.generate_from_scratch ? '1' : '0'}`;
     
     post(url);
   };

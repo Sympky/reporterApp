@@ -32,18 +32,26 @@ interface Vulnerability {
   description: string;
   impact: string;
   recommendations: string;
-  files: FileAttachment[];
+  files?: FileAttachment[];
 }
 
 interface Props {
-  template_id: number;
+  template_id: number | null;
   client_id: number;
   project_id: number;
   methodologies: Methodology[];
   vulnerabilities: Vulnerability[];
+  generate_from_scratch?: boolean;
 }
 
-export default function AddDetails({ template_id, client_id, project_id, methodologies, vulnerabilities }: Props) {
+export default function AddDetails({ 
+  template_id, 
+  client_id, 
+  project_id, 
+  methodologies, 
+  vulnerabilities,
+  generate_from_scratch = false
+}: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
     {
       title: 'Reports',
@@ -68,12 +76,13 @@ export default function AddDetails({ template_id, client_id, project_id, methodo
   
   const { data, setData, post, processing, errors } = useForm({
     name: '',
-    report_template_id: template_id.toString(),
+    report_template_id: template_id?.toString() || '',
     client_id: client_id.toString(),
     project_id: project_id.toString(),
     executive_summary: '',
     methodologies: [] as number[],
     findings: [] as { vulnerability_id: number; include_evidence: boolean }[],
+    generate_from_scratch: generate_from_scratch,
   });
 
   const handleSelectMethodology = (id: number) => {
@@ -147,6 +156,16 @@ export default function AddDetails({ template_id, client_id, project_id, methodo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Update form data with latest selections
+    setData('methodologies', selectedMethodologies);
+    setData('findings', selectedFindings);
+    
+    // If generating from scratch, we don't need to submit the template ID
+    if (data.generate_from_scratch) {
+      setData('report_template_id', '');
+    }
+    
     post(route('reports.store'));
   };
 
@@ -377,7 +396,7 @@ export default function AddDetails({ template_id, client_id, project_id, methodo
                                   </div>
                                   <p className="text-sm text-gray-500 mt-1">{vulnerability.description.substring(0, 100)}...</p>
                                   
-                                  {isVulnerabilitySelected(vulnerability.id) && vulnerability.files.length > 0 && (
+                                  {isVulnerabilitySelected(vulnerability.id) && vulnerability.files && vulnerability.files.length > 0 && (
                                     <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
                                       <div className="flex items-center text-gray-800">
                                         <Checkbox 
@@ -412,7 +431,7 @@ export default function AddDetails({ template_id, client_id, project_id, methodo
                                     <span className="text-gray-800">{index + 1}.</span>
                                     <span className="text-gray-800">{vulnerability.name}</span>
                                     {getSeverityBadge(vulnerability.severity)}
-                                    {finding.include_evidence && vulnerability.files.length > 0 && (
+                                    {finding.include_evidence && vulnerability.files && vulnerability.files.length > 0 && (
                                       <Badge variant="outline" className="text-xs text-gray-800">
                                         Evidence included
                                       </Badge>

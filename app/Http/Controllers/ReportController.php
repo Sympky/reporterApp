@@ -28,24 +28,40 @@ class ReportController extends Controller
     /**
      * Display a listing of the reports.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
+            $perPage = $request->input('per_page', 10); // Default 10 items per page
+            $page = $request->input('page', 1);
+            
             Log::info('Starting reports index method');
             
-            $reports = Report::with([
+            $reportsQuery = Report::with([
                     'client', 
                     'project', 
                     'reportTemplate', 
                     'createdBy:id,name'
                 ])
-                ->orderBy('created_at', 'desc')
-                ->get();
+                ->orderBy('created_at', 'desc');
             
-            Log::info('Reports query executed. Raw count: ' . $reports->count());
+            // Get the total count for pagination
+            $total = $reportsQuery->count();
             
-            // Filter out reports that don't have required relationships
-            $filteredReports = $reports->filter(function ($report) {
+            // Execute the paginated query
+            $paginatedReports = $reportsQuery->skip(($page - 1) * $perPage)
+                                            ->take($perPage)
+                                            ->get();
+            
+            Log::info('Reports query executed. Raw count: ' . $paginatedReports->count());
+            
+            // Filter out reports that don't have required relationships (except for generate_from_scratch reports)
+            $filteredReports = $paginatedReports->filter(function ($report) {
+                // If generate_from_scratch is true, we don't need a template
+                if ($report->generate_from_scratch) {
+                    return $report->client && $report->project;
+                }
+                
+                // Otherwise check all relationships
                 return $report->client && $report->project && $report->reportTemplate;
             });
             
@@ -83,6 +99,11 @@ class ReportController extends Controller
 
             return Inertia::render('reports/index', [
                 'reports' => $processedReports->values(),
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total
+                ]
             ]);
         } catch (\Exception $e) {
             Log::error('Exception in reports index: ' . $e->getMessage());
@@ -91,6 +112,11 @@ class ReportController extends Controller
             // Still render the page with empty reports array
             return Inertia::render('reports/index', [
                 'reports' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'per_page' => 10,
+                    'total' => 0
+                ],
                 'error' => 'An error occurred while loading reports: ' . $e->getMessage()
             ]);
         }
@@ -114,7 +140,8 @@ class ReportController extends Controller
     public function selectClientProject(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'template_id' => 'required|exists:report_templates,id',
+            'template_id' => $request->boolean('generate_from_scratch') ? 'nullable' : 'required|exists:report_templates,id',
+            'generate_from_scratch' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -125,7 +152,8 @@ class ReportController extends Controller
         $projects = Project::select('id', 'name', 'client_id')->get();
 
         return Inertia::render('reports/create/SelectClientProject', [
-            'template_id' => $request->template_id,
+            'template_id' => $request->input('template_id'),
+            'generate_from_scratch' => $request->boolean('generate_from_scratch'),
             'clients' => $clients,
             'projects' => $projects,
         ]);
@@ -138,35 +166,46 @@ class ReportController extends Controller
     {
         // For GET requests, get parameters from query string
         // For POST requests, get parameters from POST data
-        $templateId = $request->input('template_id', $request->query('template_id'));
-        $clientId = $request->input('client_id', $request->query('client_id'));
-        $projectId = $request->input('project_id', $request->query('project_id'));
+        $clientId = $request->input('client_id');
+        $projectId = $request->input('project_id');
+        $templateId = $request->input('template_id');
+        $generateFromScratch = $request->boolean('generate_from_scratch');
 
-        $validator = Validator::make([
-            'template_id' => $templateId,
-            'client_id' => $clientId,
-            'project_id' => $projectId,
-        ], [
-            'template_id' => 'required|exists:report_templates,id',
+        $validationRules = [
             'client_id' => 'required|exists:clients,id',
             'project_id' => 'required|exists:projects,id',
-        ]);
+            'generate_from_scratch' => 'boolean',
+        ];
 
-        if ($validator->fails()) {
-            return redirect()->route('reports.create')->withErrors($validator);
+        // Only validate template_id if not generating from scratch
+        if (!$generateFromScratch) {
+            $validationRules['template_id'] = 'required|exists:report_templates,id';
         }
 
-        $methodologies = Methodology::select('id', 'title', 'content')->get();
-        $vulnerabilities = Vulnerability::where('project_id', $projectId)
-            ->with('files')
-            ->get();
-
-        return Inertia::render('reports/create/AddDetails', [
-            'template_id' => $templateId,
+        $validator = Validator::make([
             'client_id' => $clientId,
             'project_id' => $projectId,
-            'methodologies' => $methodologies,
-            'vulnerabilities' => $vulnerabilities,
+            'template_id' => $templateId,
+            'generate_from_scratch' => $generateFromScratch,
+        ], $validationRules);
+
+        if ($validator->fails()) {
+            return redirect()->route('reports.select-client-project')
+                ->withErrors($validator)
+                ->with('template_id', $templateId)
+                ->with('generate_from_scratch', $generateFromScratch);
+        }
+
+        return Inertia::render('reports/create/AddDetails', [
+            'client_id' => $clientId,
+            'project_id' => $projectId,
+            'template_id' => $templateId,
+            'generate_from_scratch' => $generateFromScratch,
+            'methodologies' => Methodology::select('id', 'title', 'content')->get(),
+            'vulnerabilities' => Vulnerability::select('id', 'name', 'severity', 'description', 'impact', 'recommendations')
+                ->where('is_template', true)
+                ->orWhere('project_id', $projectId)
+                ->get(),
         ]);
     }
 
@@ -175,9 +214,10 @@ class ReportController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $generateFromScratch = $request->boolean('generate_from_scratch');
+        
+        $validationRules = [
             'name' => 'required|string|max:255',
-            'report_template_id' => 'required|exists:report_templates,id',
             'client_id' => 'required|exists:clients,id',
             'project_id' => 'required|exists:projects,id',
             'executive_summary' => 'nullable|string',
@@ -186,7 +226,15 @@ class ReportController extends Controller
             'findings' => 'nullable|array',
             'findings.*.vulnerability_id' => 'exists:vulnerabilities,id',
             'findings.*.include_evidence' => 'boolean',
-        ]);
+            'generate_from_scratch' => 'boolean',
+        ];
+        
+        // Only validate report_template_id if not generating from scratch
+        if (!$generateFromScratch) {
+            $validationRules['report_template_id'] = 'required|exists:report_templates,id';
+        }
+
+        $validator = Validator::make($request->all(), $validationRules);
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -203,7 +251,7 @@ class ReportController extends Controller
                 ->with('success', 'Report created and generated successfully.');
         } else {
             return redirect()->route('reports.index')
-                ->with('warning', 'Report created but file generation failed.');
+                ->with('error', 'Report created but there was an issue generating the document.');
         }
     }
 
