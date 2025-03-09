@@ -87,6 +87,12 @@ export default function Index({ reports, pagination, error }: { reports: Report[
     window.open(`/reports/${reportId}/download`, '_blank');
   };
 
+  // Function to generate a report from scratch and download it
+  const generateFromScratchAndDownload = (reportId: number) => {
+    // Open in a new window which will force download using the new route
+    window.open(`/reports/${reportId}/generate-from-scratch`, '_blank');
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
@@ -199,14 +205,27 @@ export default function Index({ reports, pagination, error }: { reports: Report[
                         <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
-                            {report.file_exists && (
+                            {report.file_exists ? (
+                              // If file exists, show download button
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => downloadReport(report.id)}
+                                title="Download Report"
                               >
                                 <DownloadIcon className="w-4 h-4" />
                                 <span className="sr-only">Download</span>
+                              </Button>
+                            ) : (
+                              // If file doesn't exist, show generate & download button
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => generateFromScratchAndDownload(report.id)}
+                                title="Generate & Download Report"
+                              >
+                                <DownloadIcon className="w-4 h-4" />
+                                <span className="sr-only">Generate & Download</span>
                               </Button>
                             )}
                             <Button 

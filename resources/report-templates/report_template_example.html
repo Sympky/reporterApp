@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Assessment Report Template</title>
+    <style>
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #333333; }
+        h1, h2, h3, h4 { font-family: Georgia, serif; color: #003366; }
+        h1 { font-size: 18pt; text-align: center; }
+        h2 { font-size: 16pt; border-bottom: 1px solid #003366; }
+        h3 { font-size: 14pt; }
+        h4 { font-size: 12pt; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #003366; color: white; font-weight: bold; text-align: left; padding: 8px; }
+        td { border: 1px solid #ddd; padding: 8px; }
+        .severity-critical { background-color: #FF0000; color: white; padding: 2px 5px; }
+        .severity-high { background-color: #FF7F00; color: white; padding: 2px 5px; }
+        .severity-medium { background-color: #FFFF00; padding: 2px 5px; }
+        .severity-low { background-color: #0000FF; color: white; padding: 2px 5px; }
+        .severity-info { background-color: #00FF00; padding: 2px 5px; }
+        .finding { margin-bottom: 30px; border-left: 5px solid #003366; padding-left: 10px; }
+        .header { text-align: center; margin-bottom: 50px; }
+        .footer { text-align: center; margin-top: 50px; font-size: 9pt; color: #666; }
+    </style>
+</head>
+<body>
+
+<!-- Cover Page -->
+<div class="header">
+    <h1>SECURITY ASSESSMENT REPORT</h1>
+    <p><strong>Client:</strong> ${client_name}</p>
+    <p><strong>Assessment Period:</strong> ${assessment_start_date} to ${assessment_end_date}</p>
+    <p><strong>Report Date:</strong> ${report_date}</p>
+    <p><strong>Report Version:</strong> ${report_version}</p>
+</div>
+
+<!-- Table of Contents Placeholder -->
+<h2>TABLE OF CONTENTS</h2>
+<p>[Table of contents will be generated automatically]</p>
+
+<!-- Executive Summary Section -->
+<h2>EXECUTIVE SUMMARY</h2>
+
+<h3>Assessment Overview</h3>
+<p>${executive_summary.overview}</p>
+
+<h3>Key Findings Summary</h3>
+<p>${executive_summary.key_findings}</p>
+
+<h3>Risk Assessment</h3>
+<p>[Risk heat map image placeholder]</p>
+
+<h4>Summary Statistics</h4>
+<ul>
+    <li><strong>Total Vulnerabilities Found:</strong> ${stats.total}</li>
+    <li><strong>Critical Severity Issues:</strong> ${stats.critical}</li>
+    <li><strong>High Severity Issues:</strong> ${stats.high}</li>
+    <li><strong>Medium Severity Issues:</strong> ${stats.medium}</li>
+    <li><strong>Low Severity Issues:</strong> ${stats.low}</li>
+    <li><strong>Informational Issues:</strong> ${stats.info}</li>
+</ul>
+
+<h3>Priority Recommendations</h3>
+<p>${executive_summary.priority_recommendations}</p>
+
+<!-- Introduction Section -->
+<h2>INTRODUCTION</h2>
+
+<h3>Assessment Scope</h3>
+<p>${introduction.scope}</p>
+
+<h3>Assessment Objectives</h3>
+<p>${introduction.objectives}</p>
+
+<h3>Client Environment</h3>
+<p>${introduction.environment}</p>
+
+<!-- Methodology Section -->
+<h2>METHODOLOGY</h2>
+
+<h3>Testing Approach</h3>
+<p>${methodology.approach}</p>
+
+<h3>Tools Utilized</h3>
+<p>${methodology.tools}</p>
+
+<h3>Testing Phases</h3>
+<p>${methodology.phases}</p>
+
+<h3>Severity Rating System</h3>
+<p>${methodology.severity_system}</p>
+
+<table>
+    <tr>
+        <th>Severity</th>
+        <th>Description</th>
+        <th>Risk Level</th>
+    </tr>
+    <tr>
+        <td><span class="severity-critical">Critical</span></td>
+        <td>${methodology.severity_critical_def}</td>
+        <td>${methodology.severity_critical_risk}</td>
+    </tr>
+    <tr>
+        <td><span class="severity-high">High</span></td>
+        <td>${methodology.severity_high_def}</td>
+        <td>${methodology.severity_high_risk}</td>
+    </tr>
+    <tr>
+        <td><span class="severity-medium">Medium</span></td>
+        <td>${methodology.severity_medium_def}</td>
+        <td>${methodology.severity_medium_risk}</td>
+    </tr>
+    <tr>
+        <td><span class="severity-low">Low</span></td>
+        <td>${methodology.severity_low_def}</td>
+        <td>${methodology.severity_low_risk}</td>
+    </tr>
+    <tr>
+        <td><span class="severity-info">Informational</span></td>
+        <td>${methodology.severity_info_def}</td>
+        <td>${methodology.severity_info_risk}</td>
+    </tr>
+</table>
+
+<!-- Findings Matrix Section -->
+<h2>FINDINGS MATRIX</h2>
+
+<h3>Overview of Findings</h3>
+
+<!-- Template for findings matrix table -->
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Severity</th>
+        <th>Affected Systems</th>
+        <th>Remediation Difficulty</th>
+    </tr>
+    ${findings_matrix_rows}
+</table>
+
+<h3>Findings Distribution</h3>
+<p>[Pie chart showing distribution by severity - placeholder]</p>
+<p>[Bar chart showing distribution by category - placeholder]</p>
+<p>[Chart showing affected systems - placeholder]</p>
+
+<!-- Detailed Findings Section -->
+<h2>DETAILED FINDINGS</h2>
+
+<!-- Template for a finding block - this will be cloned for each finding -->
+<div class="finding">
+    <h3>Category: ${finding.category}</h3>
+    
+    <h4>${finding.title}</h4>
+    
+    <p><strong>Severity:</strong> <span class="severity-${finding.severity.toLowerCase()}">${finding.severity}</span></p>
+    
+    <p><strong>Affected Components:</strong></p>
+    <ul>
+        ${finding.components}
+    </ul>
+    
+    <p><strong>Description:</strong><br>
+    ${finding.description}</p>
+    
+    <p><strong>Proof of Concept:</strong><br>
+    ${finding.proof}</p>
+    
+    <p><strong>Impact:</strong><br>
+    ${finding.impact}</p>
+    
+    <p><strong>Remediation Steps:</strong><br>
+    ${finding.remediation}</p>
+    
+    <p><strong>Verification Steps:</strong><br>
+    ${finding.verification}</p>
+</div>
+
+<!-- Remediation Recommendations Section -->
+<h2>REMEDIATION RECOMMENDATIONS</h2>
+
+<h3>Critical and High Priority Actions</h3>
+<p>${remediation.critical_high}</p>
+
+<h3>Medium Priority Actions</h3>
+<p>${remediation.medium}</p>
+
+<h3>Long-term Security Improvements</h3>
+<p>${remediation.long_term}</p>
+
+<h3>Remediation Timeline</h3>
+<p>[Gantt chart or timeline visualization - placeholder]</p>
+
+<!-- Conclusion Section -->
+<h2>CONCLUSION</h2>
+<p>${conclusion}</p>
+
+<!-- Appendices Section -->
+<h2>APPENDICES</h2>
+
+<h3>Appendix A: Detailed Testing Methodology</h3>
+<p>${appendix.methodology}</p>
+
+<h3>Appendix B: Raw Tool Output</h3>
+<p>${appendix.tool_output}</p>
+
+<h3>Appendix C: Detailed Code Samples</h3>
+<p>${appendix.code_samples}</p>
+
+<h3>Appendix D: Glossary of Terms</h3>
+<p>${appendix.glossary}</p>
+
+<!-- Disclaimers and Limitations -->
+<h2>DISCLAIMERS AND LIMITATIONS</h2>
+<p>${disclaimers}</p>
+
+<!-- Footer -->
+<div class="footer">
+    <p>Prepared by: ${assessor_name}</p>
+    <p>Contact: ${assessor_contact}</p>
+</div>
+
+</body>
+</html> 

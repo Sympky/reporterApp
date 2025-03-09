@@ -11,6 +11,9 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\MethodologyController;
 use App\Http\Controllers\ReportTemplateController;
 use App\Http\Controllers\ReportController;
+use App\Services\DocxGenerationService;
+use App\Models\Report;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -84,6 +87,75 @@ Route::middleware(['auth'])->group(function () {
     // Debug route - remove in production
     Route::get('reports-debug', [ReportController::class, 'debug'])->name('reports.debug');
 });
+
+// Route to demonstrate generating a report from scratch and downloading it
+Route::get('/demo/generate-report-from-scratch/{reportId}', function ($reportId) {
+    try {
+        // Get the report
+        $report = Report::findOrFail($reportId);
+        
+        // Force generate-from-scratch mode
+        $report->generate_from_scratch = true;
+        $report->save();
+        
+        // Generate the report
+        $docxService = new DocxGenerationService();
+        $filePath = $docxService->generateReport($report);
+        
+        if (!$filePath) {
+            return response()->json(['error' => 'Failed to generate report'], 500);
+        }
+        
+        // If the path starts with 'public/', remove it for correct storage access
+        $filePath = str_replace('public/', '', $filePath);
+        
+        // Check if file exists
+        if (!Storage::exists($filePath)) {
+            return response()->json(['error' => 'Generated file not found'], 404);
+        }
+        
+        // Generate a friendly filename
+        $filename = $report->name . '_' . date('Y-m-d') . '.docx';
+        
+        // Return file for download
+        return Storage::download($filePath, $filename);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+})->name('demo.generate.from.scratch');
+
+// Better route for generating reports from scratch that follows RESTful conventions
+Route::get('/reports/{report}/generate-from-scratch', function (Report $report) {
+    try {
+        // Force generate-from-scratch mode
+        $report->generate_from_scratch = true;
+        $report->save();
+        
+        // Generate the report
+        $docxService = new DocxGenerationService();
+        $filePath = $docxService->generateReport($report);
+        
+        if (!$filePath) {
+            return response()->json(['error' => 'Failed to generate report'], 500);
+        }
+        
+        // If the path starts with 'public/', remove it for correct storage access
+        $filePath = str_replace('public/', '', $filePath);
+        
+        // Check if file exists
+        if (!Storage::exists($filePath)) {
+            return response()->json(['error' => 'Generated file not found'], 404);
+        }
+        
+        // Generate a friendly filename
+        $filename = $report->name . '_standardized_' . date('Y-m-d') . '.docx';
+        
+        // Return file for download
+        return Storage::download($filePath, $filename);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+})->name('reports.generate-from-scratch');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

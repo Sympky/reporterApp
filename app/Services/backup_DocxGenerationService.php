@@ -157,431 +157,130 @@ class DocxGenerationService
     private function generateHybridReport(Report $report): ?string
     {
         try {
-            Log::info("Generating structured report from scratch based on standardized format");
+            Log::info("Generating super simple report - avoiding all complex formatting");
             
-            // Create a PhpWord document with proper formatting according to guidelines
+            // Create a basic PhpWord document with minimal formatting
             $phpWord = new \PhpOffice\PhpWord\PhpWord();
             
-            // Define styles based on our style guide
-            $styles = [
-                'heading1' => ['name' => 'Georgia', 'size' => 18, 'color' => '003366', 'bold' => true],
-                'heading2' => ['name' => 'Georgia', 'size' => 16, 'color' => '003366', 'bold' => true],
-                'heading3' => ['name' => 'Georgia', 'size' => 14, 'color' => '003366', 'bold' => true],
-                'heading4' => ['name' => 'Georgia', 'size' => 12, 'color' => '003366', 'bold' => true],
-                'normal' => ['name' => 'Calibri', 'size' => 11, 'color' => '333333'],
-                'tablehead' => ['bgColor' => '003366', 'color' => 'FFFFFF', 'bold' => true]
-            ];
+            // Use the most basic styles possible
+            $fontStyleHeading1 = ['bold' => true, 'size' => 18];
+            $fontStyleHeading2 = ['bold' => true, 'size' => 14];
+            $fontStyleHeading3 = ['bold' => true, 'size' => 12];
+            $fontStyleNormal = ['size' => 11];
             
-            // Define standard severity colors
-            $severityColors = [
-                'Critical' => 'FF0000',  // Red
-                'High'     => 'FF7F00',  // Orange
-                'Medium'   => 'FFFF00',  // Yellow
-                'Low'      => '0000FF',  // Blue
-                'Info'     => '00FF00'   // Green
-            ];
-            
-            // Add a section with standard margins
+            // Add a simple section
             $section = $phpWord->addSection();
             
-            // === COVER PAGE ===
-            // Title
-            $section->addText($report->name, $styles['heading1']);
+            // Add title (as simple text)
+            $section->addText($report->name, $fontStyleHeading1);
             $section->addTextBreak(1);
             
-            // Report metadata
-            $section->addText('Client: ' . ($report->client->name ?? 'Unknown Client'), $styles['normal']);
-            $section->addText('Project: ' . ($report->project->name ?? 'Unknown Project'), $styles['normal']);
-            $section->addText('Assessment Period: ' . now()->subDays(30)->format('F j, Y') . ' to ' . now()->format('F j, Y'), $styles['normal']);
-            $section->addText('Report Date: ' . now()->format('F j, Y'), $styles['normal']);
-            $section->addText('Report Version: 1.0', $styles['normal']);
-            $section->addPageBreak();
-            
-            // === TABLE OF CONTENTS ===
-            $section->addText('TABLE OF CONTENTS', $styles['heading2']);
-            $section->addText('[Table of contents will be generated automatically]', $styles['normal']);
-            $section->addPageBreak();
-            
-            // === EXECUTIVE SUMMARY ===
-            $section->addText('EXECUTIVE SUMMARY', $styles['heading2']);
-            
-            $section->addText('Assessment Overview', $styles['heading3']);
-            $section->addText($report->executive_summary ?? 'This security assessment evaluated the systems and applications within scope for security vulnerabilities and configuration weaknesses. The assessment followed industry standard methodologies and utilized a combination of automated and manual testing techniques.', $styles['normal']);
-            $section->addTextBreak(1);
-            
-            $section->addText('Key Findings Summary', $styles['heading3']);
-            // Generate a summary based on the severity counts
-            $findings = $report->findings;
-            $findingCounts = [
-                'Critical' => $findings->where('severity', 'Critical')->count(),
-                'High' => $findings->where('severity', 'High')->count(),
-                'Medium' => $findings->where('severity', 'Medium')->count(),
-                'Low' => $findings->where('severity', 'Low')->count(),
-                'Info' => $findings->where('severity', 'Informational')->count(),
-            ];
-            
-            $findingSummary = "This assessment identified a total of " . $findings->count() . " findings: ";
-            $findingSummary .= $findingCounts['Critical'] . " Critical, ";
-            $findingSummary .= $findingCounts['High'] . " High, ";
-            $findingSummary .= $findingCounts['Medium'] . " Medium, ";
-            $findingSummary .= $findingCounts['Low'] . " Low, and ";
-            $findingSummary .= $findingCounts['Info'] . " Informational issues.";
-            
-            $section->addText($findingSummary, $styles['normal']);
-            $section->addTextBreak(1);
-            
-            // Risk Heat Map - placeholder text since we would generate this as an image
-            $section->addText('Risk Assessment', $styles['heading3']);
-            $section->addText('[Risk heat map visualization would be placed here showing the distribution of findings by severity and impact]', $styles['normal']);
-            $section->addTextBreak(1);
-            
-            // Summary Statistics
-            $section->addText('Summary Statistics', $styles['heading4']);
-            $statsTable = $section->addTable(['borderSize' => 0, 'cellMargin' => 80]);
-            $statsTable->addRow();
-            $statsTable->addCell(3000)->addText('Total Vulnerabilities Found:', $styles['normal']);
-            $statsTable->addCell(1000)->addText($findings->count(), $styles['normal']);
-            
-            foreach ($findingCounts as $severity => $count) {
-                $statsTable->addRow();
-                $statsTable->addCell(3000)->addText($severity . ' Severity Issues:', $styles['normal']);
-                $statsTable->addCell(1000)->addText($count, $styles['normal']);
-            }
-            $section->addTextBreak(1);
-            
-            // Priority Recommendations
-            $section->addText('Priority Recommendations', $styles['heading3']);
-            // Generate recommendations based on Critical and High findings
-            $criticalHighFindings = $findings->filter(function($finding) {
-                return in_array($finding->severity, ['Critical', 'High']);
-            })->take(5);
-            
-            if ($criticalHighFindings->count() > 0) {
-                foreach ($criticalHighFindings as $index => $finding) {
-                    $section->addListItem($finding->title, 0, $styles['normal']);
-                }
-            } else {
-                $section->addText('No critical or high priority recommendations identified.', $styles['normal']);
-            }
-            
-            $section->addPageBreak();
-            
-            // === INTRODUCTION ===
-            $section->addText('INTRODUCTION', $styles['heading2']);
-            
-            $section->addText('Assessment Scope', $styles['heading3']);
-            $scopeText = 'This assessment covered the following systems and applications:';
-            $section->addText($scopeText, $styles['normal']);
-            // In a real implementation, you would get this from the project scope
-            $section->addListItem('Web applications and services', 0, $styles['normal']);
-            $section->addListItem('Network infrastructure', 0, $styles['normal']);
-            $section->addListItem('Internal systems and databases', 0, $styles['normal']);
-            $section->addTextBreak(1);
-            
-            $section->addText('Assessment Objectives', $styles['heading3']);
-            $section->addText('The objectives of this security assessment were to:', $styles['normal']);
-            $section->addListItem('Identify security vulnerabilities in the in-scope systems', 0, $styles['normal']);
-            $section->addListItem('Assess the impact of identified vulnerabilities', 0, $styles['normal']);
-            $section->addListItem('Provide actionable remediation guidance', 0, $styles['normal']);
-            $section->addTextBreak(1);
-            
-            $section->addText('Client Environment', $styles['heading3']);
-            $section->addText('The client environment consists of [environment description would be inserted here based on project information].', $styles['normal']);
-            $section->addPageBreak();
-            
-            // === METHODOLOGY ===
-            $section->addText('METHODOLOGY', $styles['heading2']);
-            
-            // Add methodology section content from linked methodologies if available
-            $methodologies = $report->methodologies;
-            if ($methodologies->count() > 0) {
-                foreach ($methodologies as $methodology) {
-                    $section->addText($methodology->title, $styles['heading3']);
-                    $content = $methodology->content ?? 'No content provided.';
-                    $paragraphs = explode("\n\n", $content);
-                    
-                    foreach ($paragraphs as $paragraph) {
-                        if (trim($paragraph) !== '') {
-                            $section->addText(trim($paragraph), $styles['normal']);
-                            $section->addTextBreak(1);
-                        }
-                    }
-                }
-            } else {
-                // Standard methodology text if none provided
-                $section->addText('Testing Approach', $styles['heading3']);
-                $section->addText('This assessment utilized a combination of automated scanning and manual testing techniques following industry standard methodologies.', $styles['normal']);
-                $section->addTextBreak(1);
-                
-                $section->addText('Tools Utilized', $styles['heading3']);
-                $section->addText('The assessment utilized various security testing tools including:', $styles['normal']);
-                $section->addListItem('Vulnerability scanners and analyzers', 0, $styles['normal']);
-                $section->addListItem('Web application security testing tools', 0, $styles['normal']);
-                $section->addListItem('Network security assessment tools', 0, $styles['normal']);
-                $section->addTextBreak(1);
-            }
-            
-            // Severity Rating System
-            $section->addText('Severity Rating System', $styles['heading3']);
-            $section->addText('The following severity ratings were used to classify findings:', $styles['normal']);
-            
-            $severityTable = $section->addTable(['borderSize' => 1, 'borderColor' => '000000']);
-            
-            // Table header
-            $severityTable->addRow();
-            $header = $severityTable->addCell(1500);
-            $header->addText('Severity', $styles['tablehead']);
-            $header = $severityTable->addCell(4500);
-            $header->addText('Description', $styles['tablehead']);
-            $header = $severityTable->addCell(2000);
-            $header->addText('Risk Level', $styles['tablehead']);
-            
-            // Severity definitions
-            $severityDefinitions = [
-                'Critical' => [
-                    'desc' => 'Vulnerabilities that can be easily exploited and result in complete system compromise or significant data breach.',
-                    'risk' => 'Immediate'
-                ],
-                'High' => [
-                    'desc' => 'Vulnerabilities that are harder to exploit but could still lead to system compromise or data breach.',
-                    'risk' => 'Urgent'
-                ],
-                'Medium' => [
-                    'desc' => 'Vulnerabilities that require specific conditions to exploit or have limited impact.',
-                    'risk' => 'Moderate'
-                ],
-                'Low' => [
-                    'desc' => 'Vulnerabilities that have minimal impact or are very difficult to exploit.',
-                    'risk' => 'Low'
-                ],
-                'Info' => [
-                    'desc' => 'Informational findings that don\'t pose a direct security risk but may be useful to know.',
-                    'risk' => 'Minimal'
-                ]
-            ];
-            
-            foreach ($severityDefinitions as $severity => $details) {
-                $severityTable->addRow();
-                $cell = $severityTable->addCell(1500);
-                $textRun = $cell->addTextRun();
-                $textRun->addText($severity, array_merge($styles['normal'], ['color' => isset($severityColors[$severity]) ? $severityColors[$severity] : '000000']));
-                $severityTable->addCell(4500)->addText($details['desc'], $styles['normal']);
-                $severityTable->addCell(2000)->addText($details['risk'], $styles['normal']);
-            }
-            
-            $section->addPageBreak();
-            
-            // === FINDINGS MATRIX ===
-            $section->addText('FINDINGS MATRIX', $styles['heading2']);
-            
-            $section->addText('Overview of Findings', $styles['heading3']);
-            
-            // Findings matrix table
-            if ($findings->count() > 0) {
-                $findingsTable = $section->addTable(['borderSize' => 1, 'borderColor' => '000000']);
-                
-                // Table header
-                $findingsTable->addRow();
-                $headers = ['ID', 'Title', 'Severity', 'Affected Systems', 'Remediation Difficulty'];
-                $widths = [800, 3000, 1200, 2000, 1500];
-                
-                foreach ($headers as $index => $header) {
-                    $cell = $findingsTable->addCell($widths[$index]);
-                    $cell->addText($header, $styles['tablehead']);
-                }
-                
-                // Add findings to table
-                foreach ($findings as $index => $finding) {
-                    $findingsTable->addRow();
-                    
-                    // ID column
-                    $findingsTable->addCell($widths[0])->addText('F' . ($index + 1), $styles['normal']);
-                    
-                    // Title column
-                    $findingsTable->addCell($widths[1])->addText($finding->title, $styles['normal']);
-                    
-                    // Severity column with color
-                    $cell = $findingsTable->addCell($widths[2]);
-                    $textRun = $cell->addTextRun();
-                    $textRun->addText($finding->severity, array_merge($styles['normal'], [
-                        'color' => isset($severityColors[$finding->severity]) ? $severityColors[$finding->severity] : '000000',
-                        'bold' => true
-                    ]));
-                    
-                    // Affected systems
-                    $affectedSystems = $finding->affected_components ?? 'All systems';
-                    $findingsTable->addCell($widths[3])->addText($affectedSystems, $styles['normal']);
-                    
-                    // Remediation difficulty
-                    $difficulty = $finding->remediation_difficulty ?? 'Medium';
-                    $findingsTable->addCell($widths[4])->addText($difficulty, $styles['normal']);
-                }
-            } else {
-                $section->addText('No findings were identified during this assessment.', $styles['normal']);
-            }
-            
-            $section->addTextBreak(1);
-            
-            // Findings Distribution section
-            $section->addText('Findings Distribution', $styles['heading3']);
-            $section->addText('[Charts showing finding distribution by severity, category, and affected systems would be placed here]', $styles['normal']);
-            
-            $section->addPageBreak();
-            
-            // === DETAILED FINDINGS ===
-            $section->addText('DETAILED FINDINGS', $styles['heading2']);
-            
-            if ($findings->count() > 0) {
-                // Group findings by category
-                $categories = $findings->groupBy(function($finding) {
-                    return $finding->category ?? 'General';
-                });
-                
-                foreach ($categories as $category => $categoryFindings) {
-                    $section->addText("Category: {$category}", $styles['heading3']);
-                    
-                    foreach ($categoryFindings as $index => $finding) {
-                        // Finding title
-                        $section->addText($finding->title, $styles['heading4']);
-                        
-                        // Severity with color
-                        $textRun = $section->addTextRun();
-                        $textRun->addText('Severity: ', ['bold' => true]);
-                        $textRun->addText($finding->severity, array_merge($styles['normal'], [
-                            'color' => isset($severityColors[$finding->severity]) ? $severityColors[$finding->severity] : '000000',
-                            'bold' => true
-                        ]));
-                        
-                        // Affected Components
-                        $section->addText('Affected Components:', ['bold' => true]);
-                        $components = $finding->affected_components ?? 'All systems';
-                        $componentsArray = explode(',', $components);
-                        foreach ($componentsArray as $component) {
-                            $section->addListItem(trim($component), 0, $styles['normal']);
-                        }
-                        
-                        // Description
-                        $section->addText('Description:', ['bold' => true]);
-                        $description = $finding->description ?? 'No description provided.';
-                        $section->addText($description, $styles['normal']);
-                        
-                        // Proof of Concept
-                        $section->addText('Proof of Concept:', ['bold' => true]);
-                        $poc = $finding->proof_of_concept ?? 'No proof of concept provided.';
-                        $section->addText($poc, $styles['normal']);
-                        
-                        // Impact
-                        $section->addText('Impact:', ['bold' => true]);
-                        $impact = $finding->impact ?? 'Impact not specified.';
-                        $section->addText($impact, $styles['normal']);
-                        
-                        // Remediation Steps
-                        $section->addText('Remediation Steps:', ['bold' => true]);
-                        $remediation = $finding->remediation ?? 'No remediation steps provided.';
-                        $section->addText($remediation, $styles['normal']);
-                        
-                        // Verification Steps
-                        $section->addText('Verification Steps:', ['bold' => true]);
-                        $verification = $finding->verification_steps ?? 'No verification steps provided.';
-                        $section->addText($verification, $styles['normal']);
-                        
-                        $section->addTextBreak(2);
-                    }
-                }
-            } else {
-                $section->addText('No findings were identified during this assessment.', $styles['normal']);
-            }
-            
-            $section->addPageBreak();
-            
-            // === REMEDIATION RECOMMENDATIONS ===
-            $section->addText('REMEDIATION RECOMMENDATIONS', $styles['heading2']);
-            
-            // Critical and High Priority Actions
-            $section->addText('Critical and High Priority Actions', $styles['heading3']);
-            $criticalHighFindings = $findings->filter(function($finding) {
-                return in_array($finding->severity, ['Critical', 'High']);
-            });
-            
-            if ($criticalHighFindings->count() > 0) {
-                foreach ($criticalHighFindings as $finding) {
-                    $section->addListItem("{$finding->title} - Address immediately", 0, $styles['normal']);
-                }
-            } else {
-                $section->addText('No critical or high priority actions required.', $styles['normal']);
-            }
-            $section->addTextBreak(1);
-            
-            // Medium Priority Actions
-            $section->addText('Medium Priority Actions', $styles['heading3']);
-            $mediumFindings = $findings->filter(function($finding) {
-                return $finding->severity === 'Medium';
-            });
-            
-            if ($mediumFindings->count() > 0) {
-                foreach ($mediumFindings as $finding) {
-                    $section->addListItem("{$finding->title} - Address within 1-3 months", 0, $styles['normal']);
-                }
-            } else {
-                $section->addText('No medium priority actions required.', $styles['normal']);
-            }
-            $section->addTextBreak(1);
-            
-            // Long-term Security Improvements
-            $section->addText('Long-term Security Improvements', $styles['heading3']);
-            $section->addText('The following strategic recommendations will improve the overall security posture:', $styles['normal']);
-            $section->addListItem('Implement a formal security awareness training program', 0, $styles['normal']);
-            $section->addListItem('Establish a vulnerability management program', 0, $styles['normal']);
-            $section->addListItem('Conduct regular security assessments', 0, $styles['normal']);
-            $section->addTextBreak(1);
-            
-            // Remediation Timeline
-            $section->addText('Remediation Timeline', $styles['heading3']);
-            $section->addText('[A Gantt chart or timeline visualization would be placed here showing suggested remediation schedule]', $styles['normal']);
-            
-            $section->addPageBreak();
-            
-            // === CONCLUSION ===
-            $section->addText('CONCLUSION', $styles['heading2']);
-            $section->addText('This security assessment identified several areas where security controls could be improved. By addressing the findings according to the recommended prioritization, the organization will significantly improve its security posture and reduce the risk of successful attacks.', $styles['normal']);
-            
-            $section->addPageBreak();
-            
-            // === APPENDICES ===
-            $section->addText('APPENDICES', $styles['heading2']);
-            
-            // Appendix A
-            $section->addText('Appendix A: Detailed Testing Methodology', $styles['heading3']);
-            $section->addText('The assessment utilized industry standard methodologies including OWASP Testing Guide and NIST guidelines.', $styles['normal']);
-            
-            // Appendix B
-            $section->addText('Appendix B: Raw Tool Output', $styles['heading3']);
-            $section->addText('Raw output from scanning tools is available upon request.', $styles['normal']);
-            
-            // Appendix C
-            $section->addText('Appendix C: Detailed Code Samples', $styles['heading3']);
-            $section->addText('Relevant code samples demonstrating vulnerabilities or fixes are included in the finding details.', $styles['normal']);
-            
-            // Appendix D
-            $section->addText('Appendix D: Glossary of Terms', $styles['heading3']);
-            $section->addText('A glossary of technical terms used in this report is available upon request.', $styles['normal']);
-            
-            $section->addPageBreak();
-            
-            // === DISCLAIMERS AND LIMITATIONS ===
-            $section->addText('DISCLAIMERS AND LIMITATIONS', $styles['heading2']);
-            $section->addText('This report represents a point-in-time assessment of security vulnerabilities and may not reflect the current state of the systems if changes have been made since the assessment. The assessment was conducted according to the agreed scope and methodology, and findings are limited to what could be discovered within that scope.', $styles['normal']);
-            
-            // === FOOTER ===
+            // Add simple metadata
+            $section->addText('Client: ' . ($report->client->name ?? 'Unknown Client'), $fontStyleNormal);
+            $section->addText('Project: ' . ($report->project->name ?? 'Unknown Project'), $fontStyleNormal);
+            $section->addText('Date: ' . now()->format('F j, Y'), $fontStyleNormal);
             $section->addTextBreak(2);
-            $section->addText('Prepared by: ' . (Auth::user()->name ?? 'Security Assessor'), $styles['normal']);
-            $section->addText('Contact: ' . (Auth::user()->email ?? 'security@example.com'), $styles['normal']);
             
-            // Generate unique filename for the report
-            $timestamp = now()->format('YmdHis');
-            $reportSlug = Str::slug($report->name);
-            $savePath = 'reports/' . $reportSlug . '_' . $timestamp . '.docx';
-            $fullSavePath = Storage::path($savePath);
+            // Executive Summary 
+            $section->addText('Executive Summary', $fontStyleHeading2);
+            $section->addText($report->executive_summary ?? 'No executive summary provided.', $fontStyleNormal);
+            $section->addTextBreak(2);
+            
+            // Scope
+            $section->addText('Scope', $fontStyleHeading2);
+            $section->addText('This assessment covered the systems and applications identified in the project scope document.', $fontStyleNormal);
+            $section->addTextBreak(2);
+            
+            // Methodologies - using the simplest possible approach
+            $section->addText('Methodologies', $fontStyleHeading2);
+            $section->addTextBreak(1);
+            
+            $methodologies = $report->methodologies;
+            foreach ($methodologies as $methodology) {
+                // Add simple title without any special formatting
+                $section->addText($methodology->title ?? 'Untitled Methodology', $fontStyleHeading3);
+                
+                // Get content and split by lines
+                $content = $methodology->content ?? 'No content provided.';
+                $lines = explode("\n", $content);
+                
+                // Add each line as a simple paragraph 
+                foreach ($lines as $line) {
+                    if (trim($line) !== '') {
+                        $section->addText(trim($line), $fontStyleNormal);
+                    }
+                }
+                
+                $section->addTextBreak(1);
+            }
+            
+            // Findings
+            $findings = $report->findings;
+            if ($findings->count() > 0) {
+                $section->addText('Findings', $fontStyleHeading2);
+                $section->addTextBreak(1);
+                
+                foreach ($findings as $finding) {
+                    // Simple finding title
+                    $section->addText($finding->name ?? 'Untitled Finding', $fontStyleHeading3);
+                    
+                    // Severity
+                    $section->addText('Severity: ' . ($finding->severity ?? 'Unspecified'), ['bold' => true, 'size' => 11]);
+                    
+                    // Description
+                    $section->addText('Description:', ['bold' => true, 'size' => 11]);
+                    $description = $finding->description ?? 'No description provided.';
+                    $lines = explode("\n", $description);
+                    foreach ($lines as $line) {
+                        if (trim($line) !== '') {
+                            $section->addText(trim($line), $fontStyleNormal);
+                        }
+                    }
+                    
+                    // Impact
+                    $section->addText('Impact:', ['bold' => true, 'size' => 11]);
+                    $impact = $finding->impact ?? 'Impact not specified.';
+                    $lines = explode("\n", $impact);
+                    foreach ($lines as $line) {
+                        if (trim($line) !== '') {
+                            $section->addText(trim($line), $fontStyleNormal);
+                        }
+                    }
+                    
+                    // Recommendations
+                    $section->addText('Recommendations:', ['bold' => true, 'size' => 11]);
+                    $recommendations = $finding->recommendations ?? 'No recommendations provided.';
+                    $lines = explode("\n", $recommendations);
+                    foreach ($lines as $line) {
+                        if (trim($line) !== '') {
+                            $section->addText(trim($line), $fontStyleNormal);
+                        }
+                    }
+                    
+                    $section->addTextBreak(2);
+                }
+            }
+            
+            // Conclusion
+            $section->addText('Conclusion', $fontStyleHeading2);
+            $section->addText('This assessment has identified security issues that should be addressed according to their severity.', $fontStyleNormal);
+            
+            // Generate a unique filename
+            $fileName = 'simple_report_' . Str::slug($report->name) . '_' . time() . '.docx';
+            
+            // Define storage path
+            $disk = 'public';
+            $saveDirectory = 'reports';
+            $savePath = $saveDirectory . '/' . $fileName;
+            
+            // Create directory if needed
+            if (!Storage::disk($disk)->exists($saveDirectory)) {
+                Storage::disk($disk)->makeDirectory($saveDirectory);
+            }
+            
+            // Absolute path for saving
+            $fullSavePath = storage_path('app/public/' . $savePath);
+            Log::info("Saving simple report to: {$fullSavePath}");
             
             // Make sure directory exists
             $dirPath = dirname($fullSavePath);
