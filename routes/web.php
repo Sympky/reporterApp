@@ -139,23 +139,81 @@ Route::get('/reports/{report}/generate-from-scratch', function (Report $report) 
             return response()->json(['error' => 'Failed to generate report'], 500);
         }
         
-        // If the path starts with 'public/', remove it for correct storage access
-        $filePath = str_replace('public/', '', $filePath);
+        // Extract disk and path information
+        $path = $filePath;
+        $disk = 'local';
         
-        // Check if file exists
-        if (!Storage::exists($filePath)) {
+        // Check if path starts with a disk prefix
+        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+            $disk = $matches[1];
+            $path = $matches[2];
+        }
+        
+        // Check if the file exists in storage
+        if (!Storage::disk($disk)->exists($path)) {
             return response()->json(['error' => 'Generated file not found'], 404);
         }
+        
+        // Get the full path to the file
+        $fullPath = Storage::disk($disk)->path($path);
         
         // Generate a friendly filename
         $filename = $report->name . '_standardized_' . date('Y-m-d') . '.docx';
         
         // Return file for download
-        return Storage::download($filePath, $filename);
+        return response()->download($fullPath, $filename);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
 })->name('reports.generate-from-scratch');
+
+// Route for generating reports using the selected template
+Route::get('/reports/{report}/generate-from-template', function (Report $report) {
+    try {
+        // Ensure we're using the template by setting generate_from_scratch to false
+        $report->generate_from_scratch = false;
+        $report->save();
+        
+        // Make sure the report has a template assigned
+        if (!$report->reportTemplate) {
+            return response()->json(['error' => 'No template assigned to this report'], 400);
+        }
+        
+        // Generate the report using the template
+        $docxService = new DocxGenerationService();
+        $filePath = $docxService->generateReport($report);
+        
+        if (!$filePath) {
+            return response()->json(['error' => 'Failed to generate report'], 500);
+        }
+        
+        // Extract disk and path information
+        $path = $filePath;
+        $disk = 'local';
+        
+        // Check if path starts with a disk prefix
+        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+            $disk = $matches[1];
+            $path = $matches[2];
+        }
+        
+        // Check if the file exists in storage
+        if (!Storage::disk($disk)->exists($path)) {
+            return response()->json(['error' => 'Generated file not found'], 404);
+        }
+        
+        // Get the full path to the file
+        $fullPath = Storage::disk($disk)->path($path);
+        
+        // Generate a friendly filename
+        $filename = $report->name . '_template_' . date('Y-m-d') . '.docx';
+        
+        // Return file for download
+        return response()->download($fullPath, $filename);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+})->name('reports.generate-from-template');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
