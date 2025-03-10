@@ -1,0 +1,74 @@
+name: Laravel Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: testing
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3
+        coverage: xdebug
+
+    - uses: actions/checkout@v3
+
+    - name: Copy .env
+      run: cp .env.example .env
+
+    - name: Install composer dependencies
+      run: composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Set directory permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    - name: Generate application key
+      run: php artisan key:generate
+
+    - name: Run migrations and prepare database
+      run: |
+        php artisan migrate --force
+        php artisan db:seed --force
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: ":memory:"
+
+    - name: Make test runner script executable
+      run: chmod +x ./run-tests.sh
+
+    - name: Run unit tests
+      run: ./run-tests.sh tests/Unit
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: ":memory:"
+
+    - name: Run feature tests
+      run: ./run-tests.sh tests/Feature
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: ":memory:"
+        
+    - name: Upload test artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-logs
+        path: |
+          ./storage/logs
+          ./phpunit.xml 
