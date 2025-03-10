@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
+/**
+ * @deprecated This service is deprecated and will be removed in a future version.
+ * Use App\Services\ReportGeneration\FromScratchReportGenerator or
+ * App\Services\ReportGeneration\TemplateReportGenerator instead.
+ */
 class DocxGenerationService
 {
     /**

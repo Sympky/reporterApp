@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +41,8 @@ interface Props {
   project_id: number;
   methodologies: Methodology[];
   vulnerabilities: Vulnerability[];
-  generate_from_scratch?: boolean;
+  generation_method?: 'from_scratch' | 'from_template';
+  generate_from_scratch?: boolean; // For backward compatibility
 }
 
 export default function AddDetails({ 
@@ -50,6 +51,7 @@ export default function AddDetails({
   project_id, 
   methodologies, 
   vulnerabilities,
+  generation_method = 'from_scratch',
   generate_from_scratch = false
 }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
@@ -74,6 +76,9 @@ export default function AddDetails({
     include_evidence: boolean;
   }[]>([]);
   
+  // Use generation_method if provided, fallback to generate_from_scratch for backward compatibility
+  const effectiveGenerationMethod = generation_method || (generate_from_scratch ? 'from_scratch' : 'from_template');
+  
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     report_template_id: template_id?.toString() || '',
@@ -82,8 +87,18 @@ export default function AddDetails({
     executive_summary: '',
     methodologies: [] as number[],
     findings: [] as { vulnerability_id: number; include_evidence: boolean }[],
-    generate_from_scratch: generate_from_scratch,
+    generation_method: effectiveGenerationMethod,
+    generate_from_scratch: effectiveGenerationMethod === 'from_scratch', // For backward compatibility
   });
+
+  // When component initializes, ensure generation method aligns with template_id
+  useEffect(() => {
+    // If a template ID is provided, ensure we're set to use templates
+    if (template_id) {
+      setData('generation_method', 'from_template');
+      setData('generate_from_scratch', false);
+    }
+  }, []);
 
   const handleSelectMethodology = (id: number) => {
     const updatedSelection = selectedMethodologies.includes(id)
@@ -157,16 +172,23 @@ export default function AddDetails({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Update form data with latest selections
+    // Update methodologies and findings
     setData('methodologies', selectedMethodologies);
     setData('findings', selectedFindings);
     
-    // If generating from scratch, we don't need to submit the template ID
-    if (data.generate_from_scratch) {
-      setData('report_template_id', '');
+    // Ensure consistency between template_id and generation method
+    if (data.report_template_id && data.report_template_id !== '') {
+      setData('generation_method', 'from_template');
+      setData('generate_from_scratch', false);
+    } else {
+      setData('generation_method', 'from_scratch');
+      setData('generate_from_scratch', true);
     }
     
-    post(route('reports.store'));
+    // Submit the form after a short delay to ensure state updates are applied
+    setTimeout(() => {
+      post(route('reports.store'));
+    }, 0);
   };
 
   const getSeverityBadge = (severity: string) => {
@@ -244,16 +266,29 @@ export default function AddDetails({
                     <TabsTrigger value="findings">Findings</TabsTrigger>
                   </TabsList>
                   
-                  {/* Executive Summary Tab */}
+                  {/* Summary Tab */}
                   <TabsContent value="summary" className="space-y-4 mt-4">
+                    <div className="mb-4 bg-muted/30 rounded-md p-4">
+                      <h3 className="font-medium mb-2">Generation Method</h3>
+                      <p className="text-sm">
+                        {data.generation_method === 'from_scratch' 
+                          ? 'Generate from scratch (creating a new document)' 
+                          : 'Use template (filling in data to a template)'}
+                        
+                        {data.generation_method === 'from_template' && data.report_template_id && (
+                          <span className="font-medium"> - Template ID: {data.report_template_id}</span>
+                        )}
+                      </p>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="executive_summary">Executive Summary</Label>
                       <Textarea
                         id="executive_summary"
+                        placeholder="Enter executive summary"
                         value={data.executive_summary}
                         onChange={(e) => setData('executive_summary', e.target.value)}
-                        placeholder="Enter an executive summary for the report..."
-                        className="min-h-[200px]"
+                        rows={10}
                       />
                       {errors.executive_summary && (
                         <p className="text-sm text-red-500">{errors.executive_summary}</p>
@@ -359,11 +394,15 @@ export default function AddDetails({
                   
                   {/* Findings Tab */}
                   <TabsContent value="findings" className="space-y-4 mt-4">
+                    <div className="mb-4 bg-muted/30 rounded-md p-4">
+                      <h3 className="font-medium mb-2">Vulnerabilities for Selected Project</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Showing vulnerabilities specific to project ID {project_id}.
+                      </p>
+                    </div>
+
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-sm font-medium">Select Vulnerabilities as Findings</h3>
-                        <p className="text-xs text-gray-500">{selectedFindings.length} selected</p>
-                      </div>
+                      <h3 className="text-sm font-medium">Select Vulnerabilities as Findings</h3>
                       
                       {vulnerabilities.length === 0 ? (
                         <div className="text-center py-6 border rounded-md">
