@@ -27,14 +27,14 @@ jobs:
         extensions: mbstring, dom, fileinfo, sqlite3
         coverage: xdebug
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Get composer cache directory
       id: composer-cache
       run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
     - name: Cache composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -62,7 +62,7 @@ jobs:
       run: XDEBUG_MODE=coverage ./run-tests.sh tests/Unit --coverage-clover=coverage.xml
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
@@ -75,14 +75,14 @@ jobs:
 
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-results
         path: test-reports
 
     - name: Upload coverage results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-coverage
         path: coverage.xml 

@@ -14,6 +14,7 @@ A comprehensive workflow that runs both unit and feature tests. It:
 - Runs migrations and seeds the database
 - Executes both unit and feature tests
 - Uploads logs and configuration files as artifacts if tests fail
+- Sets DB_TRANSACTION_NESTING=false to prevent transaction issues in tests
 
 ### 2. Unit Tests (`unit-tests.yml`)
 
@@ -22,9 +23,19 @@ A focused workflow for unit testing with code coverage reporting. It:
 - Only triggers on changes to PHP files, composer files, or PHPUnit configuration
 - Uses dependency caching to speed up workflow runs
 - Generates code coverage reports
-- Uploads coverage data to Codecov (if configured)
+- Uploads coverage data to Codecov
 - Creates JUnit XML test reports
 - Always uploads test results and coverage data as artifacts
+
+## GitHub Actions Versions
+
+All GitHub Actions used in these workflows are up-to-date with the latest available versions:
+
+- actions/checkout@v4
+- actions/upload-artifact@v4
+- actions/cache@v4
+- codecov/codecov-action@v4
+- shivammathur/setup-php@v2
 
 ## Customization
 
@@ -71,6 +82,10 @@ To run specific test directories or files, modify the path in the test execution
 - name: Run specific tests
   run: ./run-tests.sh tests/Unit/Http/Controllers
 ```
+
+## DB_TRANSACTION_NESTING Environment Variable
+
+All workflows include the `DB_TRANSACTION_NESTING=false` environment variable, which is crucial to prevent Laravel database transaction issues during testing. This was added based on previous test failures you've experienced.
 
 ## Troubleshooting
 

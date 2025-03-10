@@ -27,7 +27,7 @@ jobs:
         extensions: mbstring, dom, fileinfo, mysql, sqlite3
         coverage: xdebug
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Copy .env
       run: cp .env.example .env
@@ -48,6 +48,7 @@ jobs:
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
+        DB_TRANSACTION_NESTING: false
 
     - name: Make test runner script executable
       run: chmod +x ./run-tests.sh
@@ -57,16 +58,18 @@ jobs:
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
+        DB_TRANSACTION_NESTING: false
 
     - name: Run feature tests
       run: ./run-tests.sh tests/Feature
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
+        DB_TRANSACTION_NESTING: false
         
     - name: Upload test artifacts on failure
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-logs
         path: |
