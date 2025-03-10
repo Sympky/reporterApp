@@ -49,17 +49,29 @@ jobs:
     - name: Generate application key
       run: php artisan key:generate
 
+    - name: Create SQLite database
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+
     - name: Set environment variables
       run: |
         echo "DB_CONNECTION=sqlite" >> .env
-        echo "DB_DATABASE=:memory:" >> .env
+        echo "DB_DATABASE=$GITHUB_WORKSPACE/database/database.sqlite" >> .env
         echo "DB_TRANSACTION_NESTING=false" >> .env
+
+    - name: Run migrations with seeds
+      run: php artisan migrate --seed --force
 
     - name: Make test runner script executable
       run: chmod +x ./run-tests.sh
 
     - name: Run unit tests with coverage
       run: XDEBUG_MODE=coverage ./run-tests.sh tests/Unit --coverage-clover=coverage.xml
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: ":memory:"
+        DB_TRANSACTION_NESTING: false
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -72,6 +84,10 @@ jobs:
 
     - name: Run JUnit tests
       run: ./run-tests.sh --log-junit test-reports/junit.xml tests/Unit
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: ":memory:"
+        DB_TRANSACTION_NESTING: false
 
     - name: Upload test results
       if: always()

@@ -41,13 +41,16 @@ jobs:
     - name: Generate application key
       run: php artisan key:generate
 
-    - name: Run migrations and prepare database
+    - name: Create SQLite database
       run: |
-        php artisan migrate --force
-        php artisan db:seed --force
+        mkdir -p database
+        touch database/database.sqlite
+        
+    - name: Run migrations and prepare database
+      run: php artisan migrate --seed --force
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: ":memory:"
+        DB_DATABASE: database/database.sqlite
         DB_TRANSACTION_NESTING: false
 
     - name: Make test runner script executable
@@ -74,4 +77,5 @@ jobs:
         name: test-logs
         path: |
           ./storage/logs
-          ./phpunit.xml 
+          ./phpunit.xml
+          ./database/database.sqlite 
