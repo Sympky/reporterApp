@@ -30,7 +30,7 @@ class FileFactory extends Factory
         return [
             'name' => $this->faker->sentence(3),
             'description' => $this->faker->text(100),
-            'original_filename' => $originalFilename,
+            'original_name' => $originalFilename,
             'path' => 'files/' . $uniqueId . '.' . $extension,
             'size' => $this->faker->numberBetween(1000, 10000000),
             'mime_type' => $this->getMimeType($extension),

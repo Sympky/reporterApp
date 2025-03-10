@@ -1,0 +1,88 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - '**.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - '**.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, sqlite3
+        coverage: xdebug
+
+    - uses: actions/checkout@v3
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Copy .env
+      run: cp .env.example .env
+
+    - name: Install composer dependencies
+      run: composer install --no-scripts --no-interaction --prefer-dist
+
+    - name: Generate application key
+      run: php artisan key:generate
+
+    - name: Set environment variables
+      run: |
+        echo "DB_CONNECTION=sqlite" >> .env
+        echo "DB_DATABASE=:memory:" >> .env
+        echo "DB_TRANSACTION_NESTING=false" >> .env
+
+    - name: Make test runner script executable
+      run: chmod +x ./run-tests.sh
+
+    - name: Run unit tests with coverage
+      run: XDEBUG_MODE=coverage ./run-tests.sh tests/Unit --coverage-clover=coverage.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+    - name: Create test reports directory
+      run: mkdir -p test-reports
+
+    - name: Run JUnit tests
+      run: ./run-tests.sh --log-junit test-reports/junit.xml tests/Unit
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: test-reports
+
+    - name: Upload coverage results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-coverage
+        path: coverage.xml 

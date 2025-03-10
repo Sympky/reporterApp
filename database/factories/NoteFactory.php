@@ -23,10 +23,9 @@ class NoteFactory extends Factory
     {
         return [
             'content' => $this->faker->paragraphs(2, true),
-            'noteable_type' => 'project', // Default type
-            'noteable_id' => 1,           // Default ID
+            'notable_type' => 'project', // Default type
+            'notable_id' => 1,           // Default ID
             'created_by' => 1,
-            'updated_by' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ];

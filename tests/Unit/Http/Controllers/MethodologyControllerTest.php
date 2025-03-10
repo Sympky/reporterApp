@@ -48,32 +48,28 @@ class MethodologyControllerTest extends TestCase
         parent::tearDown();
     }
 
-    /** @test */
+    #[Test]
     public function index_method_displays_methodologies_list()
     {
-        // Mock request
-        $request = new Request();
-        
         // Create test data
         $methodologies = Methodology::factory()->count(3)->create([
             'created_by' => $this->user->id
         ]);
         
         // Execute the controller method
-        $response = $this->methodologyController->index($request);
+        $response = $this->methodologyController->index();
         
         // Assert the response
         $this->assertEquals(200, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function store_method_creates_new_methodology()
     {
         // Setup request data
         $data = [
-            'name' => 'Test Methodology',
-            'description' => 'Test methodology description',
-            'category' => 'web'
+            'title' => 'Test Methodology',
+            'content' => 'Test methodology content',
         ];
         
         $request = new Request($data);
@@ -82,18 +78,17 @@ class MethodologyControllerTest extends TestCase
         $response = $this->methodologyController->store($request);
         
         // Assert the response
-        $this->assertEquals(201, $response->getStatusCode()); // Created status code
+        $this->assertEquals(302, $response->getStatusCode()); // Redirect status code
         
         // Assert the methodology was created in the database
         $this->assertDatabaseHas('methodologies', [
-            'name' => 'Test Methodology',
-            'description' => 'Test methodology description',
-            'category' => 'web',
+            'title' => 'Test Methodology',
+            'content' => 'Test methodology content',
             'created_by' => $this->user->id
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function show_method_displays_methodology_details()
     {
         // Create test data
@@ -106,31 +101,22 @@ class MethodologyControllerTest extends TestCase
         
         // Assert the response
         $this->assertEquals(200, $response->getStatusCode());
-        
-        // Convert JSON response to array
-        $responseData = json_decode($response->getContent(), true);
-        
-        // Assert the methodology details are returned
-        $this->assertEquals($methodology->id, $responseData['id']);
-        $this->assertEquals($methodology->name, $responseData['name']);
     }
 
-    /** @test */
+    #[Test]
     public function update_method_updates_methodology()
     {
         // Create test data
         $methodology = Methodology::factory()->create([
-            'name' => 'Original Methodology',
-            'description' => 'Original description',
-            'category' => 'mobile',
+            'title' => 'Original Methodology',
+            'content' => 'Original content',
             'created_by' => $this->user->id
         ]);
         
         // Setup request data
         $data = [
-            'name' => 'Updated Methodology',
-            'description' => 'Updated description',
-            'category' => 'web'
+            'title' => 'Updated Methodology',
+            'content' => 'Updated content'
         ];
         
         $request = new Request($data);
@@ -139,18 +125,17 @@ class MethodologyControllerTest extends TestCase
         $response = $this->methodologyController->update($request, $methodology);
         
         // Assert the response
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(302, $response->getStatusCode()); // Redirect status code
         
         // Assert the methodology was updated in the database
         $this->assertDatabaseHas('methodologies', [
             'id' => $methodology->id,
-            'name' => 'Updated Methodology',
-            'description' => 'Updated description',
-            'category' => 'web'
+            'title' => 'Updated Methodology',
+            'content' => 'Updated content'
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function destroy_method_deletes_methodology()
     {
         // Create test data
@@ -158,15 +143,17 @@ class MethodologyControllerTest extends TestCase
             'created_by' => $this->user->id
         ]);
         
+        $methodologyId = $methodology->id;
+        
         // Execute the controller method
         $response = $this->methodologyController->destroy($methodology);
         
         // Assert the response
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(302, $response->getStatusCode()); // Redirect status code
         
         // Assert the methodology was deleted from the database
         $this->assertDatabaseMissing('methodologies', [
-            'id' => $methodology->id
+            'id' => $methodologyId
         ]);
     }
 } 

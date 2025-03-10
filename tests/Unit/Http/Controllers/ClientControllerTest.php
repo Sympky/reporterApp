@@ -73,16 +73,17 @@ class ClientControllerTest extends TestCase
         // Setup request data
         $data = [
             'name' => 'Test Client',
-            'contact_name' => 'John Doe',
-            'contact_email' => 'john@example.com',
-            'contact_phone' => '123-456-7890',
-            'address' => '123 Main St',
-            'notes' => 'Test notes'
+            'description' => 'Test client description',
+            'emails' => '[]',
+            'phone_numbers' => '[]',
+            'addresses' => null,
+            'website_urls' => '[]',
+            'other_contact_info' => '[]',
         ];
         
-        $request = new Request($data);
-        
-        // Mock validation to pass
+        // Create a proper Mockery mock for the request
+        $request = Mockery::mock(Request::class);
+        $request->shouldReceive('all')->andReturn($data);
         $request->shouldReceive('validate')->andReturn($data);
         
         // Execute the controller method
@@ -93,7 +94,8 @@ class ClientControllerTest extends TestCase
         
         // Assert the client was created in the database with appropriate fields
         $this->assertDatabaseHas('clients', [
-            'name' => 'Test Client'
+            'name' => 'Test Client',
+            'description' => 'Test client description',
         ]);
     }
 
@@ -105,9 +107,9 @@ class ClientControllerTest extends TestCase
             'created_by' => $this->user->id
         ]);
         
-        // Create request
-        $request = new Request();
-        $request->shouldReceive('expectsJson')->andReturn(true);
+        // Create proper Mockery mock for the request
+        $request = Mockery::mock(Request::class);
+        $request->shouldReceive('expectsJson')->andReturn(false);
         
         // Execute the controller method
         $response = $this->clientController->show($request, $client);
@@ -143,13 +145,17 @@ class ClientControllerTest extends TestCase
         // Setup request data
         $data = [
             'name' => 'Updated Client',
-            'contact_name' => 'Jane Doe',
-            'contact_email' => 'jane@example.com'
+            'description' => 'Updated description',
+            'emails' => '[]',
+            'phone_numbers' => '[]',
+            'addresses' => null,
+            'website_urls' => '[]',
+            'other_contact_info' => '[]',
         ];
         
-        $request = new Request($data);
-        
-        // Mock validation to pass
+        // Create proper Mockery mock for the request
+        $request = Mockery::mock(Request::class);
+        $request->shouldReceive('all')->andReturn($data);
         $request->shouldReceive('validate')->andReturn($data);
         
         // Execute the controller method
@@ -173,18 +179,23 @@ class ClientControllerTest extends TestCase
             'created_by' => $this->user->id
         ]);
         
-        // Create request
-        $request = new Request();
+        // Create proper Mockery mock for the request
+        $request = Mockery::mock(Request::class);
+        $request->shouldReceive('expectsJson')->andReturn(false);
         
-        // Mock client->projects()->count() to return 0
-        $projectsRelation = Mockery::mock();
-        $projectsRelation->shouldReceive('count')->andReturn(0);
-        $client->shouldReceive('projects')->andReturn($projectsRelation);
+        // Use a real Client instance but check for projects directly in the test
+        // This avoids the 'shouldReceive' error on the model
         
-        // Execute the controller method
+        // Execute the controller method directly
+        // We're testing without projects intentionally
         $response = $this->clientController->destroy($request, $client);
         
         // Assert the response
         $this->assertEquals(302, $response->getStatusCode()); // Redirect status code
+        
+        // Verify the client was deleted
+        $this->assertDatabaseMissing('clients', [
+            'id' => $client->id
+        ]);
     }
 } 

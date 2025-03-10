@@ -57,14 +57,29 @@ class ProjectControllerTest extends TestCase
     #[Test]
     public function index_method_displays_projects_list()
     {
-        // Mock the client's projects
+        // Create test projects
         $projects = collect([
-            new Project(['id' => 1, 'name' => 'Project 1']),
-            new Project(['id' => 2, 'name' => 'Project 2'])
+            Project::factory()->create([
+                'client_id' => $this->client->id,
+                'created_by' => $this->user->id,
+                'updated_by' => $this->user->id,
+                'name' => 'Project 1'
+            ]),
+            Project::factory()->create([
+                'client_id' => $this->client->id,
+                'created_by' => $this->user->id,
+                'updated_by' => $this->user->id,
+                'name' => 'Project 2'
+            ])
         ]);
         
-        $client = Client::factory()->create();
-        $client->shouldReceive('getProjectsAttribute')->andReturn($projects);
+        // Create a mock client with the projects relation
+        $client = Client::factory()->create([
+            'created_by' => $this->user->id
+        ]);
+        
+        // Use the "real" projects relationship
+        // This avoids mocking the model directly which causes the error
         
         // Execute the controller method
         $response = $this->projectController->index($client);
@@ -92,23 +107,41 @@ class ProjectControllerTest extends TestCase
     #[Test]
     public function store_method_creates_new_project()
     {
-        // Setup request data
+        // Create request data including created_by and updated_by
         $data = [
             'name' => 'Test Project',
             'description' => 'Test project description',
-            'start_date' => '2023-01-01',
-            'end_date' => '2023-12-31',
-            'status' => 'active'
+            'status' => 'active',
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id
         ];
+
+        // Create a real client
+        $client = Client::factory()->create([
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id
+        ]);
         
+        // Use Inertia and Auth facades that are already mocked in setup
+        
+        // Mock the Request class properly
         $request = Mockery::mock(Request::class);
         $request->shouldReceive('all')->andReturn($data);
         
-        // Execute the controller method
-        $response = $this->projectController->store($request, $this->client);
+        // Execute the controller method with a real client
+        $response = $this->projectController->store($request, $client);
         
         // Assert the response
         $this->assertEquals(201, $response->getStatusCode()); // Created status code
+        
+        // Verify a project was created
+        $this->assertDatabaseHas('projects', [
+            'name' => 'Test Project',
+            'description' => 'Test project description',
+            'client_id' => $client->id,
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id
+        ]);
     }
 
     #[Test]
