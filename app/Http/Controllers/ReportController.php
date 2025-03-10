@@ -170,15 +170,19 @@ class ReportController extends Controller
         $projectId = $request->input('project_id');
         $templateId = $request->input('template_id');
         $generateFromScratch = $request->boolean('generate_from_scratch');
+        $generationMethod = $request->input('generation_method', $generateFromScratch ? 'from_scratch' : 'from_template');
+
+        // For backward compatibility, check both formats
+        $generateFromScratch = $generationMethod === 'from_scratch' || $generateFromScratch;
 
         $validationRules = [
             'client_id' => 'required|exists:clients,id',
             'project_id' => 'required|exists:projects,id',
-            'generate_from_scratch' => 'boolean',
+            'generation_method' => 'required|in:from_scratch,from_template',
         ];
 
-        // Only validate template_id if not generating from scratch
-        if (!$generateFromScratch) {
+        // Only validate template_id if using template-based generation
+        if ($generationMethod === 'from_template') {
             $validationRules['template_id'] = 'required|exists:report_templates,id';
         }
 
@@ -186,26 +190,29 @@ class ReportController extends Controller
             'client_id' => $clientId,
             'project_id' => $projectId,
             'template_id' => $templateId,
-            'generate_from_scratch' => $generateFromScratch,
+            'generation_method' => $generationMethod,
         ], $validationRules);
 
         if ($validator->fails()) {
             return redirect()->route('reports.select-client-project')
                 ->withErrors($validator)
                 ->with('template_id', $templateId)
-                ->with('generate_from_scratch', $generateFromScratch);
+                ->with('generation_method', $generationMethod);
         }
+
+        // Get vulnerabilities specific to the selected project only
+        $projectVulnerabilities = Vulnerability::select('id', 'name', 'severity', 'description', 'impact', 'recommendations')
+            ->where('project_id', $projectId)
+            ->get();
 
         return Inertia::render('reports/create/AddDetails', [
             'client_id' => $clientId,
             'project_id' => $projectId,
             'template_id' => $templateId,
-            'generate_from_scratch' => $generateFromScratch,
+            'generation_method' => $generationMethod,
+            'generate_from_scratch' => $generateFromScratch, // For backward compatibility
             'methodologies' => Methodology::select('id', 'title', 'content')->get(),
-            'vulnerabilities' => Vulnerability::select('id', 'name', 'severity', 'description', 'impact', 'recommendations')
-                ->where('is_template', true)
-                ->orWhere('project_id', $projectId)
-                ->get(),
+            'vulnerabilities' => $projectVulnerabilities,
         ]);
     }
 
@@ -214,7 +221,9 @@ class ReportController extends Controller
      */
     public function store(Request $request)
     {
-        $generateFromScratch = $request->boolean('generate_from_scratch');
+        // Use generation_method if provided, fallback to generate_from_scratch for backward compatibility
+        $generationMethod = $request->input('generation_method', $request->boolean('generate_from_scratch') ? 'from_scratch' : 'from_template');
+        $generateFromScratch = $generationMethod === 'from_scratch';
         
         $validationRules = [
             'name' => 'required|string|max:255',
@@ -226,11 +235,11 @@ class ReportController extends Controller
             'findings' => 'nullable|array',
             'findings.*.vulnerability_id' => 'exists:vulnerabilities,id',
             'findings.*.include_evidence' => 'boolean',
-            'generate_from_scratch' => 'boolean',
+            'generation_method' => 'required|in:from_scratch,from_template',
         ];
         
-        // Only validate report_template_id if not generating from scratch
-        if (!$generateFromScratch) {
+        // Only validate report_template_id if using template-based generation
+        if ($generationMethod === 'from_template') {
             $validationRules['report_template_id'] = 'required|exists:report_templates,id';
         }
 
@@ -240,8 +249,29 @@ class ReportController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Create the report using the service
-        $report = $this->reportService->createReport($request->all());
+        // Ensure consistency between template selection and generation method
+        $requestData = $request->all();
+        
+        // If a template ID is provided but generation method is from_scratch, correct it
+        if (!empty($requestData['report_template_id']) && $generationMethod === 'from_scratch') {
+            $requestData['generation_method'] = 'from_template';
+            $requestData['generate_from_scratch'] = false;
+            Log::info('Corrected generation method to from_template based on template ID presence');
+        }
+        
+        // If no template ID but generation method is from_template, correct it
+        if ((empty($requestData['report_template_id']) || !isset($requestData['report_template_id'])) && $generationMethod === 'from_template') {
+            $requestData['generation_method'] = 'from_scratch';
+            $requestData['generate_from_scratch'] = true;
+            $requestData['report_template_id'] = null;
+            Log::info('Corrected generation method to from_scratch due to missing template ID');
+        }
+        
+        // Ensure generate_from_scratch is correctly set based on generation_method
+        $requestData['generate_from_scratch'] = $requestData['generation_method'] === 'from_scratch';
+        
+        // Create the report using the service with the corrected data
+        $report = $this->reportService->createReport($requestData);
 
         // Generate the report file
         $filePath = $this->reportService->generateReportFile($report);

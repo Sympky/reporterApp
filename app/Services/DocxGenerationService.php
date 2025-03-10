@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
+/**
+ * @deprecated This service is deprecated and will be removed in a future version.
+ * Use App\Services\ReportGeneration\FromScratchReportGenerator or
+ * App\Services\ReportGeneration\TemplateReportGenerator instead.
+ */
 class DocxGenerationService
 {
     /**
@@ -581,7 +586,8 @@ class DocxGenerationService
             $timestamp = now()->format('YmdHis');
             $reportSlug = Str::slug($report->name);
             $savePath = 'reports/' . $reportSlug . '_' . $timestamp . '.docx';
-            $fullSavePath = Storage::path($savePath);
+            // Ensure we're using the public disk for storage
+            $fullSavePath = storage_path('app/public/' . $savePath);
             
             // Make sure directory exists
             $dirPath = dirname($fullSavePath);
@@ -603,7 +609,7 @@ class DocxGenerationService
                     throw new \Exception("Failed to create file");
                 }
                 
-                // Update report record
+                // Update report record with public path for proper access
                 $report->generated_file_path = 'public/' . $savePath;
                 $report->status = 'generated';
                 $report->updated_by = Auth::id();
@@ -1211,7 +1217,6 @@ class DocxGenerationService
                     $content .= "<h3>" . htmlspecialchars($methodology->title ?? 'Untitled Methodology') . "</h3>";
                     $content .= "<p>" . nl2br(htmlspecialchars($methodology->content ?? 'No content provided.')) . "</p>";
                 }
-                $content .= "<hr>";
             }
             
             // Findings

@@ -93,6 +93,29 @@ export default function Index({ reports, pagination, error }: { reports: Report[
     window.open(`/reports/${reportId}/generate-from-scratch`, '_blank');
   };
 
+  // Function to generate a report from template and download it
+  const generateFromTemplateAndDownload = (reportId: number) => {
+    // Open in a new window which will force download using the template route
+    window.open(`/reports/${reportId}/generate-from-template`, '_blank');
+  };
+
+  // Function to handle download based on report type
+  const handleDownload = (report: Report) => {
+    if (report.file_exists) {
+      // If the file already exists, use the regular download route
+      downloadReport(report.id);
+    } else {
+      // If file doesn't exist, need to generate it first
+      if (report.generate_from_scratch) {
+        // If it should be generated from scratch, use that route
+        generateFromScratchAndDownload(report.id);
+      } else {
+        // If it's using a template, use the template generation route
+        generateFromTemplateAndDownload(report.id);
+      }
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
@@ -205,29 +228,21 @@ export default function Index({ reports, pagination, error }: { reports: Report[
                         <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
-                            {report.file_exists ? (
-                              // If file exists, show download button
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => downloadReport(report.id)}
-                                title="Download Report"
-                              >
-                                <DownloadIcon className="w-4 h-4" />
-                                <span className="sr-only">Download</span>
-                              </Button>
-                            ) : (
-                              // If file doesn't exist, show generate & download button
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => generateFromScratchAndDownload(report.id)}
-                                title="Generate & Download Report"
-                              >
-                                <DownloadIcon className="w-4 h-4" />
-                                <span className="sr-only">Generate & Download</span>
-                              </Button>
-                            )}
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleDownload(report)}
+                              title={
+                                report.file_exists 
+                                  ? "Download Report" 
+                                  : report.generate_from_scratch 
+                                    ? "Generate & Download from Scratch"
+                                    : "Generate & Download from Template"
+                              }
+                            >
+                              <DownloadIcon className="w-4 h-4" />
+                              <span className="sr-only">Download</span>
+                            </Button>
                             <Button 
                               variant="outline" 
                               size="sm"
