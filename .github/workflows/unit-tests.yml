@@ -97,12 +97,13 @@ jobs:
       run: chmod +x ./run-tests.sh
 
     - name: Run unit tests with coverage
-      run: XDEBUG_MODE=coverage ./run-tests.sh tests/Unit --coverage-clover=coverage.xml
+      run: ./run-tests.sh tests/Unit --coverage-clover=coverage.xml
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
         DB_TRANSACTION_NESTING: false
         VITE_MANIFEST_MOCK: true
+        XDEBUG_MODE: coverage
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

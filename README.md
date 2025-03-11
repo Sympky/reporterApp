@@ -148,6 +148,55 @@ The application uses Laravel Sanctum for API token authentication. Register and 
 3. Customize the report content
 4. Generate and download as DOCX
 
+## 🧪 Testing and Code Coverage
+
+This project uses PHPUnit for testing. Tests are organized into two groups:
+
+- **Unit Tests**: Located in `tests/Unit` directory
+- **Feature Tests**: Located in `tests/Feature` directory
+
+### Running Tests
+
+To run all tests:
+
+```bash
+./run-tests.sh
+```
+
+To run specific test groups:
+
+```bash
+./run-tests.sh tests/Unit
+./run-tests.sh tests/Feature
+```
+
+To run an individual test file:
+
+```bash
+./run-tests.sh tests/Unit/Http/Controllers/ProjectControllerTest.php
+```
+
+### Code Coverage
+
+To generate code coverage reports, you need Xdebug installed and configured on your PHP environment.
+
+1. **Install Xdebug**:
+   - For Ubuntu/Debian: `sudo apt-get install php-xdebug`
+   - For macOS with Homebrew: `brew install php@8.2-xdebug`
+   - For Windows with XAMPP/WAMP: Enable Xdebug in php.ini
+
+2. **Generate Coverage Report**:
+
+```bash
+./run-tests.sh tests/Unit --coverage-html coverage
+```
+
+This will generate an HTML coverage report in the `coverage` directory. Open `coverage/index.html` in your browser to view it.
+
+Notes:
+- If Xdebug is not installed, the tests will still run, but without generating coverage reports
+- The CI/CD pipeline on GitHub Actions is configured to generate coverage reports automatically
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
