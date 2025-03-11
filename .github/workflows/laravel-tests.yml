@@ -40,6 +40,14 @@ jobs:
 
     - name: Generate application key
       run: php artisan key:generate
+      
+    - name: Create Vite build directory and mock manifest
+      run: |
+        mkdir -p public/build/assets
+        echo '{"resources/js/app.tsx":{"file":"assets/app-mock.js","src":"resources/js/app.tsx","isEntry":true,"css":["assets/app-mock.css"]},"resources/js/pages/Dashboard.tsx":{"file":"assets/dashboard-mock.js","src":"resources/js/pages/Dashboard.tsx","isEntry":true}}' > public/build/manifest.json
+        echo '// Mock JS file for testing' > public/build/assets/app-mock.js
+        echo '/* Mock CSS file for testing */' > public/build/assets/app-mock.css
+        echo '// Mock JS file for testing' > public/build/assets/dashboard-mock.js
 
     - name: Create SQLite database
       run: |
@@ -62,6 +70,7 @@ jobs:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
         DB_TRANSACTION_NESTING: false
+        VITE_MANIFEST_MOCK: true
 
     - name: Run feature tests
       run: ./run-tests.sh tests/Feature
@@ -69,6 +78,7 @@ jobs:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
         DB_TRANSACTION_NESTING: false
+        VITE_MANIFEST_MOCK: true
         
     - name: Upload test artifacts on failure
       if: failure()

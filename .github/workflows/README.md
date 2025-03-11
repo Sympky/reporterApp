@@ -13,6 +13,7 @@ A comprehensive workflow that runs both unit and feature tests. It:
 - Uses a file-based SQLite database for migrations and seeding
 - Uses in-memory SQLite for faster test execution
 - Runs migrations and seeds together in a single command
+- Creates a mock Vite manifest for testing frontend components
 - Executes both unit and feature tests
 - Uploads logs and configuration files as artifacts if tests fail
 - Sets DB_TRANSACTION_NESTING=false to prevent transaction issues in tests
@@ -25,6 +26,7 @@ A focused workflow for unit testing with code coverage reporting. It:
 - Uses dependency caching to speed up workflow runs
 - Uses a file-based SQLite database for migrations and seeding
 - Uses in-memory SQLite for test execution
+- Creates a mock Vite manifest for testing frontend components
 - Generates code coverage reports
 - Uploads coverage data to Codecov
 - Creates JUnit XML test reports
@@ -53,6 +55,21 @@ The workflows use two different SQLite database configurations:
    - Each test case gets a fresh database for isolation
 
 This approach solves the common issue where in-memory databases don't persist between PHP processes, causing "no such table" errors when seeding after migrations.
+
+## Vite Manifest Mock for Testing
+
+The workflows create a mock Vite manifest to solve the "Vite manifest not found" error that occurs during testing:
+
+1. **Creates a mock manifest file**:
+   - Placed at `public/build/manifest.json`
+   - Contains mock entries for key JavaScript entry points
+   - Prevents errors when running tests that render views
+
+2. **Creates mock asset files**:
+   - Places empty JS and CSS files in the `public/build/assets` directory
+   - Ensures that any actual asset loading doesn't result in 404 errors
+
+This approach allows tests to run without requiring the actual frontend build process, which would be unnecessary and slow in a CI/CD environment.
 
 ## Customization
 
@@ -104,6 +121,10 @@ To run specific test directories or files, modify the path in the test execution
 
 All workflows include the `DB_TRANSACTION_NESTING=false` environment variable, which is crucial to prevent Laravel database transaction issues during testing. This was added based on previous test failures you've experienced.
 
+## VITE_MANIFEST_MOCK Environment Variable
+
+The `VITE_MANIFEST_MOCK=true` environment variable is set to indicate that tests should use the mock Vite manifest, ensuring that frontend-related tests can run properly without actual compiled assets.
+
 ## Troubleshooting
 
 If you encounter issues:
@@ -113,5 +134,6 @@ If you encounter issues:
 3. Verify that your tests run successfully locally
 4. Make sure the `run-tests.sh` script is executable and working locally
 5. If you see "no such table" errors, check that migrations are running before the seeders
+6. If you see "Vite manifest not found" errors, verify that the mock manifest creation step is working correctly
 
 For more information on GitHub Actions, see the [official documentation](https://docs.github.com/en/actions). 
