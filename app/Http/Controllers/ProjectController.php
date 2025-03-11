@@ -124,7 +124,25 @@ class ProjectController extends Controller
         // Get vulnerability templates for the add vulnerability form
         $templates = Vulnerability::where('is_template', true)
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(function ($template) {
+                return [
+                    'id' => $template->id,
+                    'name' => $template->name,
+                    'description' => $template->description,
+                    'severity' => $template->severity,
+                    'cvss' => $template->cvss,
+                    'cve' => $template->cve,
+                    'recommendations' => $template->recommendations,
+                    'impact' => $template->impact,
+                    'references' => $template->references,
+                    'tags' => $template->tags,
+                    'likelihood_score' => $template->likelihood_score,
+                    'remediation_score' => $template->remediation_score,
+                    'impact_score' => $template->impact_score,
+                    'affected_resources' => $template->affected_resources,
+                ];
+            });
         
         return Inertia::render('projects/show', [
             'project' => $project,
