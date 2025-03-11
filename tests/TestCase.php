@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\MockViteManifest;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -24,41 +25,52 @@ abstract class TestCase extends BaseTestCase
      */
     protected function mockVite()
     {
-        // Create a mock Vite manifest file if it doesn't exist
-        $manifestPath = public_path('build/manifest.json');
-        $manifestDir = dirname($manifestPath);
+        // Use our MockViteManifest class to replace the Vite instance
+        MockViteManifest::setup();
         
-        if (!File::exists($manifestDir)) {
-            File::makeDirectory($manifestDir, 0755, true);
+        // Create the build directory if it doesn't exist
+        $buildDir = public_path('build');
+        $assetsDir = public_path('build/assets');
+        
+        if (!File::exists($buildDir)) {
+            File::makeDirectory($buildDir, 0755, true);
         }
         
+        if (!File::exists($assetsDir)) {
+            File::makeDirectory($assetsDir, 0755, true);
+        }
+        
+        // Create a manifest file with mock entries
+        $manifestPath = $buildDir . '/manifest.json';
+        
         if (!File::exists($manifestPath)) {
-            // Create a minimal mock manifest
-            $manifest = [
-                'resources/js/app.tsx' => [
-                    'file' => 'assets/app-mock.js',
-                    'src' => 'resources/js/app.tsx',
-                    'isEntry' => true,
-                    'css' => ['assets/app-mock.css']
-                ],
-                'resources/js/pages/Dashboard.tsx' => [
-                    'file' => 'assets/dashboard-mock.js',
-                    'src' => 'resources/js/pages/Dashboard.tsx',
-                    'isEntry' => true,
-                ],
+            // Create all the needed mock files
+            $mockFiles = [
+                'app-mock.js',
+                'app-mock.css',
+                'dashboard-mock.js',
+                'auth-login-mock.js',
+                'auth-register-mock.js',
+                'auth-forgot-password-mock.js',
+                'auth-reset-password-mock.js',
+                'auth-verify-email-mock.js',
+                'auth-confirm-password-mock.js',
+                'settings-profile-mock.js'
             ];
             
-            File::put($manifestPath, json_encode($manifest));
-            
-            // Create empty asset files to prevent 404 errors
-            if (!File::exists(public_path('build/assets'))) {
-                File::makeDirectory(public_path('build/assets'), 0755, true);
+            // Create each mock file
+            foreach ($mockFiles as $file) {
+                $extension = pathinfo($file, PATHINFO_EXTENSION);
+                $content = $extension === 'js' 
+                    ? '// Mock JS file for testing' 
+                    : '/* Mock CSS file for testing */';
+                    
+                File::put($assetsDir . '/' . $file, $content);
             }
             
-            // Create the mock JS and CSS files
-            File::put(public_path('build/assets/app-mock.js'), '// Mock JS file for testing');
-            File::put(public_path('build/assets/app-mock.css'), '/* Mock CSS file for testing */');
-            File::put(public_path('build/assets/dashboard-mock.js'), '// Mock JS file for testing');
+            // Create the manifest file that lists all the mock files
+            $manifest = app(\Illuminate\Foundation\Vite::class)->manifest();
+            File::put($manifestPath, json_encode($manifest));
         }
     }
 }
