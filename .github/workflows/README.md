@@ -1,139 +1,88 @@
 # GitHub Workflows for Laravel Testing
 
-This directory contains GitHub Actions workflow configurations for automated testing of the Laravel application.
+This directory contains GitHub Actions workflow configurations for automated testing and code quality checks for the Laravel application.
 
 ## Available Workflows
 
 ### 1. Laravel Tests (`laravel-tests.yml`)
 
-A comprehensive workflow that runs both unit and feature tests. It:
+A streamlined workflow that runs unit and feature tests separately to avoid the issues with running them together. It:
 
+- Triggers only on relevant file changes to avoid unnecessary runs
 - Sets up PHP 8.2 with necessary extensions
 - Configures a MySQL service for tests that require a database
+- Uses caching for faster Composer dependency installation
 - Uses a file-based SQLite database for migrations and seeding
 - Uses in-memory SQLite for faster test execution
-- Runs migrations and seeds together in a single command
-- Creates a mock Vite manifest for testing frontend components
-- Executes both unit and feature tests
-- Uploads logs and configuration files as artifacts if tests fail
-- Sets DB_TRANSACTION_NESTING=false to prevent transaction issues in tests
-
-### 2. Unit Tests (`unit-tests.yml`)
-
-A focused workflow for unit testing with code coverage reporting. It:
-
-- Only triggers on changes to PHP files, composer files, or PHPUnit configuration
-- Uses dependency caching to speed up workflow runs
-- Uses a file-based SQLite database for migrations and seeding
-- Uses in-memory SQLite for test execution
-- Creates a mock Vite manifest for testing frontend components
-- Generates code coverage reports
+- Runs unit and feature tests separately to avoid integration issues
+- Generates and merges coverage reports from both test suites
 - Uploads coverage data to Codecov
-- Creates JUnit XML test reports
-- Always uploads test results and coverage data as artifacts
+- Uploads logs and configuration files as artifacts if tests fail
 
-## GitHub Actions Versions
+### 2. Code Quality Checks (`lint.yml`)
 
-All GitHub Actions used in these workflows are up-to-date with the latest available versions:
+A workflow focused on code style and linting:
 
-- actions/checkout@v4
-- actions/upload-artifact@v4
-- actions/cache@v4
-- codecov/codecov-action@v4
-- shivammathur/setup-php@v2
+- Triggers only on relevant file changes
+- Runs Laravel Pint for PHP code style checks in test mode
+- Runs frontend formatting checks
+- Runs linting checks for JavaScript/TypeScript code
+- Uses proper caching for both PHP and Node.js dependencies
 
-## SQLite Database Configuration
+## Key Improvements
 
-The workflows use two different SQLite database configurations:
+1. **Eliminated the custom run-tests.sh script**:
+   - Now uses `php artisan test` directly with appropriate flags
+   - Runs unit and feature tests separately, which solves the failure issue
 
-1. **File-based SQLite for migrations and seeding**: 
-   - A persistent SQLite database stored in `database/database.sqlite`
-   - Used for `php artisan migrate --seed` to ensure all migrations and seeds run in the same database
+2. **More targeted workflow triggers**:
+   - Only runs workflows when relevant files change
+   - Reduces unnecessary CI/CD runs
 
-2. **In-memory SQLite for tests**:
-   - Faster execution using `:memory:` as the database
-   - Each test case gets a fresh database for isolation
+3. **Improved dependency caching**:
+   - Faster workflow execution
+   - Reduces GitHub Actions usage
 
-This approach solves the common issue where in-memory databases don't persist between PHP processes, causing "no such table" errors when seeding after migrations.
+4. **Simplified Vite mock setup**:
+   - More maintainable with minimal mock files
+   - Still provides the necessary frontend mock for testing
 
-## Vite Manifest Mock for Testing
+5. **Sequential test execution**:
+   - Runs unit and feature tests separately to avoid conflicts
+   - Coverage reports from both test suites are merged
 
-The workflows create a mock Vite manifest to solve the "Vite manifest not found" error that occurs during testing:
+## Environment Configuration
 
-1. **Creates a mock manifest file**:
-   - Placed at `public/build/manifest.json`
-   - Contains mock entries for key JavaScript entry points
-   - Prevents errors when running tests that render views
+The workflows use specialized environment configurations:
 
-2. **Creates mock asset files**:
-   - Places empty JS and CSS files in the `public/build/assets` directory
-   - Ensures that any actual asset loading doesn't result in 404 errors
+1. **SQLite for testing**:
+   - File-based for migrations: `${{ github.workspace }}/database/database.sqlite`
+   - In-memory for tests: `:memory:`
 
-This approach allows tests to run without requiring the actual frontend build process, which would be unnecessary and slow in a CI/CD environment.
+2. **Special environment variables**:
+   - `DB_TRANSACTION_NESTING=false`: Prevents transaction issues in tests
+   - `VITE_MANIFEST_MOCK=true`: Tells the app to use mock frontend assets
 
-## Customization
+## Common Options for Test Commands
 
-### PHP Version
-
-If you need to change the PHP version, modify the `php-version` parameter in the `setup-php` step:
-
-```yaml
-- uses: shivammathur/setup-php@v2
-  with:
-    php-version: '8.1' # Change to your required version
-```
-
-### Database Configuration
-
-By default, the workflow uses SQLite for both migrations and tests. To use MySQL or another database:
-
-1. In the environment variables, change:
-```yaml
-env:
-  DB_CONNECTION: mysql
-  DB_HOST: 127.0.0.1
-  DB_PORT: 3306
-  DB_DATABASE: testing
-  DB_USERNAME: root
-  DB_PASSWORD: password
-```
-
-### Branches
-
-To change which branches trigger the workflows, modify the `branches` section:
-
-```yaml
-on:
-  push:
-    branches: [ main, staging, production ] # Your branches here
-```
-
-### Test Path
-
-To run specific test directories or files, modify the path in the test execution steps:
-
-```yaml
-- name: Run specific tests
-  run: ./run-tests.sh tests/Unit/Http/Controllers
-```
-
-## DB_TRANSACTION_NESTING Environment Variable
-
-All workflows include the `DB_TRANSACTION_NESTING=false` environment variable, which is crucial to prevent Laravel database transaction issues during testing. This was added based on previous test failures you've experienced.
-
-## VITE_MANIFEST_MOCK Environment Variable
-
-The `VITE_MANIFEST_MOCK=true` environment variable is set to indicate that tests should use the mock Vite manifest, ensuring that frontend-related tests can run properly without actual compiled assets.
+- `--without-tty`: Prevents issues with terminal output in CI environments
+- `--coverage-clover=file.xml`: Generates code coverage reports
 
 ## Troubleshooting
 
 If you encounter issues:
 
-1. Check the workflow logs in the GitHub Actions tab
-2. Ensure your `.env.example` file is properly configured
-3. Verify that your tests run successfully locally
-4. Make sure the `run-tests.sh` script is executable and working locally
-5. If you see "no such table" errors, check that migrations are running before the seeders
-6. If you see "Vite manifest not found" errors, verify that the mock manifest creation step is working correctly
+1. **Tests failing in CI but passing locally**:
+   - Check the workflow logs for specific errors
+   - Ensure your database setup is similar between environments
+   - Consider if your tests rely on specific database state
+
+2. **Coverage reports not generating**:
+   - Make sure Xdebug is properly configured
+   - Check that `XDEBUG_MODE=coverage` is set
+
+3. **Vite-related errors**:
+   - Check that the mock Vite manifest is being created correctly
+   - Make sure your tests aren't relying on specific asset behavior
 
 For more information on GitHub Actions, see the [official documentation](https://docs.github.com/en/actions). 

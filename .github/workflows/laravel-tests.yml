@@ -3,8 +3,24 @@ name: Laravel Tests
 on:
   push:
     branches: [ main, master, develop ]
+    paths:
+      - '**.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml'
+      - '.env.example'
+      - 'database/migrations/**'
+      - 'database/seeders/**'
   pull_request:
     branches: [ main, master, develop ]
+    paths:
+      - '**.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml'
+      - '.env.example'
+      - 'database/migrations/**'
+      - 'database/seeders/**'
 
 jobs:
   laravel-tests:
@@ -21,86 +37,146 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-    - uses: shivammathur/setup-php@v2
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
         extensions: mbstring, dom, fileinfo, mysql, sqlite3
         coverage: xdebug
+        tools: composer:v2
 
-    - uses: actions/checkout@v4
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Install Composer dependencies
+      run: composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
 
     - name: Copy .env
       run: cp .env.example .env
 
-    - name: Install composer dependencies
-      run: composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+    - name: Generate application key
+      run: php artisan key:generate
 
     - name: Set directory permissions
       run: chmod -R 777 storage bootstrap/cache
 
-    - name: Generate application key
-      run: php artisan key:generate
-      
-    - name: Create Vite build directory and mock manifest
+    - name: Setup Vite mock for testing
       run: |
         mkdir -p public/build/assets
-        # Create mock files
-        echo '// Mock JS file for testing' > public/build/assets/app-mock.js
-        echo '/* Mock CSS file for testing */' > public/build/assets/app-mock.css
-        echo '// Mock JS file for testing' > public/build/assets/dashboard-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/auth-login-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/auth-register-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/auth-forgot-password-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/auth-reset-password-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/auth-verify-email-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/auth-confirm-password-mock.js
-        echo '// Mock JS file for testing' > public/build/assets/settings-profile-mock.js
         
-        # Create a comprehensive mock manifest with all needed entries
+        # Create a minimal mock manifest
         echo '{
-          "resources/js/app.tsx":{"file":"assets/app-mock.js","src":"resources/js/app.tsx","isEntry":true,"css":["assets/app-mock.css"]},
-          "resources/js/pages/Dashboard.tsx":{"file":"assets/dashboard-mock.js","src":"resources/js/pages/Dashboard.tsx","isEntry":true},
-          "resources/js/pages/dashboard.tsx":{"file":"assets/dashboard-mock.js","src":"resources/js/pages/dashboard.tsx","isEntry":true},
-          "resources/js/pages/auth/login.tsx":{"file":"assets/auth-login-mock.js","src":"resources/js/pages/auth/login.tsx","isEntry":true},
-          "resources/js/pages/auth/register.tsx":{"file":"assets/auth-register-mock.js","src":"resources/js/pages/auth/register.tsx","isEntry":true},
-          "resources/js/pages/auth/forgot-password.tsx":{"file":"assets/auth-forgot-password-mock.js","src":"resources/js/pages/auth/forgot-password.tsx","isEntry":true},
-          "resources/js/pages/auth/reset-password.tsx":{"file":"assets/auth-reset-password-mock.js","src":"resources/js/pages/auth/reset-password.tsx","isEntry":true},
-          "resources/js/pages/auth/verify-email.tsx":{"file":"assets/auth-verify-email-mock.js","src":"resources/js/pages/auth/verify-email.tsx","isEntry":true},
-          "resources/js/pages/auth/confirm-password.tsx":{"file":"assets/auth-confirm-password-mock.js","src":"resources/js/pages/auth/confirm-password.tsx","isEntry":true},
-          "resources/js/pages/settings/profile.tsx":{"file":"assets/settings-profile-mock.js","src":"resources/js/pages/settings/profile.tsx","isEntry":true}
+          "resources/js/app.tsx": {
+            "file": "assets/app-mock.js",
+            "src": "resources/js/app.tsx",
+            "isEntry": true,
+            "css": ["assets/app-mock.css"]
+          }
         }' > public/build/manifest.json
+        
+        # Create minimal mock assets
+        echo '// Mock JS file' > public/build/assets/app-mock.js
+        echo '/* Mock CSS file */' > public/build/assets/app-mock.css
 
     - name: Create SQLite database
       run: |
         mkdir -p database
         touch database/database.sqlite
-        
-    - name: Run migrations and prepare database
+
+    - name: Run migrations with seeds
       run: php artisan migrate --seed --force
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
+        DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
         DB_TRANSACTION_NESTING: false
+        VITE_MANIFEST_MOCK: true
 
-    - name: Make test runner script executable
-      run: chmod +x ./run-tests.sh
-
-    - name: Run unit tests
-      run: ./run-tests.sh tests/Unit
+    - name: Run Unit Tests
+      run: php artisan test tests/Unit --without-tty --coverage-clover=coverage-unit.xml
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
         DB_TRANSACTION_NESTING: false
         VITE_MANIFEST_MOCK: true
+        XDEBUG_MODE: coverage
 
-    - name: Run feature tests
-      run: ./run-tests.sh tests/Feature
+    - name: Run Feature Tests
+      run: php artisan test tests/Feature --without-tty --coverage-clover=coverage-feature.xml
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
         DB_TRANSACTION_NESTING: false
         VITE_MANIFEST_MOCK: true
+        XDEBUG_MODE: coverage
+
+    - name: Merge coverage reports
+      run: |
+        php -r '
+        $unit = simplexml_load_file("coverage-unit.xml");
+        $feature = simplexml_load_file("coverage-feature.xml");
         
+        // Combine metrics
+        $unit_metrics = $unit->project->metrics;
+        $feature_metrics = $feature->project->metrics;
+        
+        $combined_metrics = clone $unit_metrics;
+        $combined_metrics["statements"] = (int)$unit_metrics["statements"] + (int)$feature_metrics["statements"];
+        $combined_metrics["coveredstatements"] = (int)$unit_metrics["coveredstatements"] + (int)$feature_metrics["coveredstatements"];
+        $combined_metrics["methods"] = (int)$unit_metrics["methods"] + (int)$feature_metrics["methods"];
+        $combined_metrics["coveredmethods"] = (int)$unit_metrics["coveredmethods"] + (int)$feature_metrics["coveredmethods"];
+        $combined_metrics["elements"] = (int)$unit_metrics["elements"] + (int)$feature_metrics["elements"];
+        $combined_metrics["coveredelements"] = (int)$unit_metrics["coveredelements"] + (int)$feature_metrics["coveredelements"];
+        
+        $unit->project->metrics = $combined_metrics;
+        
+        // Add feature test files data
+        foreach ($feature->project->file as $file) {
+            $exists = false;
+            foreach ($unit->project->file as $unit_file) {
+                if ((string)$unit_file["name"] === (string)$file["name"]) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $new_file = $unit->project->addChild("file");
+                foreach ($file->attributes() as $name => $value) {
+                    $new_file->addAttribute($name, $value);
+                }
+                foreach ($file->children() as $child) {
+                    $new_child = $new_file->addChild($child->getName());
+                    foreach ($child->attributes() as $name => $value) {
+                        $new_child->addAttribute($name, $value);
+                    }
+                }
+            }
+        }
+        
+        $unit->asXML("coverage.xml");
+        '
+        if [ ! -f coverage.xml ]; then
+          # If merging fails, just use the unit test coverage
+          cp coverage-unit.xml coverage.xml
+        fi
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
     - name: Upload test artifacts on failure
       if: failure()
       uses: actions/upload-artifact@v4
@@ -109,4 +185,5 @@ jobs:
         path: |
           ./storage/logs
           ./phpunit.xml
-          ./database/database.sqlite 
+          ./database/database.sqlite
+          ./coverage-*.xml 
