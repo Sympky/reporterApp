@@ -1,0 +1,10 @@
+                  The report file hasn't been generated yet or generation failed. Click the "Regenerate" button to create the report file.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  );
+} }

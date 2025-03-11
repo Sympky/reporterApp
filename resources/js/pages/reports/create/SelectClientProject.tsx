@@ -70,7 +70,7 @@ export default function SelectClientProject({
       setData('generation_method', 'from_template');
       setData('generate_from_scratch', false);
     }
-  }, []);
+  }, [setData, template_id]);
   
   useEffect(() => {
     // When client_id changes, filter the projects
@@ -92,7 +92,7 @@ export default function SelectClientProject({
       setFilteredProjects([]);
       setData('project_id', '');
     }
-  }, [data.client_id, projects]);
+  }, [data.client_id, data.project_id, projects, setData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

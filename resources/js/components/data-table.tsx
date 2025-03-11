@@ -20,7 +20,7 @@ interface DataTableProps<TData, TValue> {
   placeholder?: string;
 }
 
-function formatArray(arr: any): string {
+function formatArray(arr: string | unknown): string {
   if (typeof arr === 'string') {
     try {
       const parsed = JSON.parse(arr);
@@ -31,7 +31,7 @@ function formatArray(arr: any): string {
       console.error('Error parsing JSON:', e);
     }
   }
-  return String(arr); // Returnează ca string dacă nu este un array
+  return String(arr); // Return as string if not an array
 }
 
 export function DataTable<TData, TValue>({

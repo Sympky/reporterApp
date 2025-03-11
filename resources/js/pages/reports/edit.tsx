@@ -88,7 +88,7 @@ export default function Edit({ report, methodologies, vulnerabilities }: Props) 
     
     setSelectedFindings(initialFindings);
     setData('findings', initialFindings);
-  }, [report]);
+  }, [report, setData]);
 
   const handleSelectMethodology = (id: number) => {
     const updatedSelection = selectedMethodologies.includes(id)
@@ -136,7 +136,7 @@ export default function Edit({ report, methodologies, vulnerabilities }: Props) 
     setData('findings', updatedFindings);
   };
 
-  const moveItem = (array: any[], index: number, direction: 'up' | 'down'): any[] => {
+  const moveItem = (array: unknown[setData], index: number, direction: 'up' | 'down'): unknown[] => {
     if (array.length <= 1) return array;
     
     const newArray = [...array];

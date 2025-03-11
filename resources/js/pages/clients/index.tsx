@@ -1,9 +1,8 @@
 // resources/js/pages/Clients/Index.tsx
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, Link } from '@inertiajs/react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -33,21 +32,17 @@ interface PageProps {
 
 // Helper function to format array values from JSON string
 const formatArrayValue = (value: unknown): string => {
-  if (!value) return '';
-  
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) {
         return parsed.join(', ');
       }
-      return value;
-    } catch (e) {
-      return value;
+    } catch {
+      // If parsing fails, just return the string
     }
   }
-  
-  return String(value);
+  return String(value || '');
 };
 
 // Definirea coloanelor pentru tabel
@@ -102,18 +97,16 @@ const columns: ColumnDef<Client>[] = [
 function EditClientDialog({ client }: { client: Client }) {
   const [open, setOpen] = useState(false);
 
-  // Helper function to ensure we have valid JSON arrays
   const ensureJsonArray = (value: string | null | undefined): string => {
-    if (!value) {
-      return '[]';
-    }
+    if (!value) return '[]';
+    
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) {
         return value;
       }
-      return JSON.stringify([value]);
-    } catch (e) {
+      return JSON.stringify([parsed]);
+    } catch {
       return value ? JSON.stringify([value]) : '[]';
     }
   };
@@ -128,7 +121,7 @@ function EditClientDialog({ client }: { client: Client }) {
     other_contact_info: ensureJsonArray(client.other_contact_info),
   };
   
-  const { data, setData, put, processing, errors, reset } = useForm(initialFormData);
+  const { data, setData, put, processing, errors } = useForm(initialFormData);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -412,78 +405,49 @@ function MultipleValueInput({
   placeholder?: string;
   onSubmitRef?: React.MutableRefObject<(() => boolean) | null>;
 }) {
-  // Parse the stringified JSON array or initialize an empty array
-  const [values, setValues] = useState<string[]>(() => {
-    if (!value) {
-      return [];
-    }
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-      return [String(parsed)];
-    } catch (e) {
-      return value ? [value] : [];
-    }
-  });
-  
-  // Update values when the input value changes from outside
-  useEffect(() => {
-    if (value === undefined || value === null) {
-      setValues([]);
-      onChange('[]');
-      return;
-    }
-    
-    try {
-      const parsed = JSON.parse(value);
-      
-      if (Array.isArray(parsed)) {
-        setValues(parsed);
-      } else if (value) {
-        const newArray = [String(parsed)];
-        setValues(newArray);
-        onChange(JSON.stringify(newArray));
-      } else {
-        setValues([]);
-        onChange('[]');
-      }
-    } catch (e) {
-      if (value) {
-        const newArray = [value];
-        setValues(newArray);
-        onChange(JSON.stringify(newArray));
-      } else {
-        setValues([]);
-        onChange('[]');
-      }
-    }
-  }, [value, onChange, label]);
-  
-  // Current input value for new item
   const [currentValue, setCurrentValue] = useState('');
-  
-  // Check if there's a pending value and add it
-  const addPendingValue = () => {
-    if (currentValue.trim()) {
-      addValue();
-      return true;
+  const [values, setValues] = useState<string[]>([]);
+
+  // Parse the initial value
+  useEffect(() => {
+    if (value) {
+      try {
+        const parsedValues = JSON.parse(value);
+        if (Array.isArray(parsedValues)) {
+          setValues(parsedValues);
+        }
+      } catch {
+        console.error('Error parsing JSON array');
+        setValues([]);
+      }
+    } else {
+      setValues([]);
     }
-    return false;
-  };
-  
+  }, [value]);
+
   // Add a new value
-  const addValue = () => {
+  const addValue = useCallback(() => {
     if (currentValue.trim()) {
       const newValues = [...values, currentValue.trim()];
       setValues(newValues);
-      const jsonString = JSON.stringify(newValues);
-      onChange(jsonString);
+      onChange(JSON.stringify(newValues));
       setCurrentValue('');
     }
-  };
-  
+  }, [currentValue, values, onChange]);
+
+  // Expose a function to add the current input if it's not empty
+  useEffect(() => {
+    if (onSubmitRef) {
+      onSubmitRef.current = () => {
+        if (currentValue.trim()) {
+          addValue();
+          return true;
+        }
+        return false;
+      };
+    }
+  }, [currentValue, onSubmitRef, addValue]);
+
   // Handle blur event to add any pending value
   const handleBlur = () => {
     if (currentValue.trim()) {
@@ -495,7 +459,7 @@ function MultipleValueInput({
   const removeValue = (index: number) => {
     const newValues = values.filter((_, i) => i !== index);
     setValues(newValues);
-    const jsonString = newValues.length > 0 ? JSON.stringify(newValues) : '[]';
+    const jsonString = newValues.length > 0 ? JSON.stringify(newValues) : '[addValue, addValue]';
     onChange(jsonString);
   };
   
@@ -506,26 +470,6 @@ function MultipleValueInput({
       addValue();
     }
   };
-  
-  // Expose a function to add the current input if it's not empty
-  useEffect(() => {
-    if (onSubmitRef) {
-      onSubmitRef.current = () => {
-        if (currentValue.trim()) {
-          addValue();
-          return true; // return true if we added something
-        }
-        return false; // return false if nothing was added
-      };
-    }
-    
-    // Cleanup function
-    return () => {
-      if (onSubmitRef) {
-        onSubmitRef.current = null;
-      }
-    };
-  }, [currentValue, onSubmitRef, addValue]);
   
   return (
     <div>
@@ -580,6 +524,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'Clients',
     href: '/clients',
+    current: true,
   },
 ];
 

@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { FormEvent, useState } from 'react';
-import { useEffect } from 'react';
 import { type BreadcrumbItem } from '@/types';
 import { ChevronLeft } from 'lucide-react';
 import FileUploader from '@/components/file-uploader';
@@ -83,12 +82,12 @@ export default function EditVulnerability({ vulnerability, project, client }: Pa
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setData(name as any, value);
+    setData(name as keyof typeof data, value);
   };
 
   // Handle select changes
   const handleSelectChange = (name: string, value: string) => {
-    setData(name as any, value);
+    setData(name as keyof typeof data, value);
   };
 
   // Handle form submission

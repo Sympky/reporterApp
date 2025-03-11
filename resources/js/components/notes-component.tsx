@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,13 +27,8 @@ export default function NotesComponent({ notableType, notableId, title = 'Notes'
   const [submitting, setSubmitting] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
 
-  // Fetch notes when component mounts or notableId/notableType changes
-  useEffect(() => {
-    fetchNotes();
-  }, [notableType, notableId]);
-
-  // Function to fetch notes
-  const fetchNotes = async () => {
+  // Function to fetch notes wrapped in useCallback
+  const fetchNotes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get('/notes', {
@@ -49,7 +44,12 @@ export default function NotesComponent({ notableType, notableId, title = 'Notes'
     } finally {
       setLoading(false);
     }
-  };
+  }, [notableType, notableId]);
+
+  // Fetch notes when component mounts or notableId/notableType changes
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   // Function to add a new note
   const addNote = async (e: React.FormEvent) => {

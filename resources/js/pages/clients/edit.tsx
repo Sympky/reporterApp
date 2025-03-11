@@ -34,7 +34,7 @@ const ensureJsonArray = (value: string | null | undefined): string => {
       return value;
     }
     return JSON.stringify([value]);
-  } catch (e) {
+  } catch {
     return value ? JSON.stringify([value]) : '[]';
   }
 };
@@ -67,7 +67,7 @@ export default function EditClient({ client }: PageProps) {
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setData(name as any, value);
+    setData(name as keyof typeof data, value);
   };
 
   // Handle form submission

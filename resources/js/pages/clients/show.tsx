@@ -2,7 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useState } from 'react';
@@ -52,7 +52,7 @@ const formatArrayValue = (value: unknown): string => {
         return parsed.join(', ');
       }
       return value;
-    } catch (e) {
+    } catch {
       return value;
     }
   }

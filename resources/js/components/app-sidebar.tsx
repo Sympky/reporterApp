@@ -21,18 +21,15 @@ type Client = {
 
 export function AppSidebar() {
     const [clients, setClients] = useState<Client[]>([]);
-    const [loading, setLoading] = useState(true);
 
     // Fetch clients with their projects when component mounts
     useEffect(() => {
         axios.get('/api/latest-clients')
             .then(response => {
                 setClients(response.data);
-                setLoading(false);
             })
             .catch(error => {
                 console.error('Error fetching clients:', error);
-                setLoading(false);
             });
     }, []);
 

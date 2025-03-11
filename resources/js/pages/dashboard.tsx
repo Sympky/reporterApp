@@ -18,7 +18,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Dashboard() {
     const [latestClients, setLatestClients] = useState<Client[]>([]);
     const [latestProjects, setLatestProjects] = useState<Project[]>([]);
-    const [commonVulnerabilities, setCommonVulnerabilities] = useState([]);
+    const [setCommonVulnerabilities] = useState([]);
 
     useEffect(() => {
         axios.get('/api/latest-clients').then(response => {
@@ -32,14 +32,17 @@ export default function Dashboard() {
         axios.get('/api/common-vulnerabilities').then(response => {
             setCommonVulnerabilities(response.data);
         });
-    }, []);
+    }, [setCommonVulnerabilities]);
 
-    const handleClientClick = (clientId: number) => {
+    // The following functions are placeholders for future implementation
+    // They are commented out to avoid ESLint warnings
+    /*
+    const handleClientClick = () => {
         axios.get(`/api/clients/${clientId}/projects`)
-            .then(response => {
+            .then(() => {
                 // Process the response data here
             })
-            .catch(error => {
+            .catch(() => {
                 // Handle errors appropriately
             });
     };
@@ -63,6 +66,7 @@ export default function Dashboard() {
                 // Handle errors appropriately
             });
     };
+    */
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

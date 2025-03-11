@@ -1,345 +1,217 @@
 import { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeftIcon, DownloadIcon, PencilIcon, RefreshCwIcon, Clipboard, CheckCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeftIcon, DownloadIcon, PencilIcon, RefreshCwIcon, CheckCircle } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { toast } from 'sonner';
 
-interface Methodology {
+interface Report {
   id: number;
   title: string;
-  content: string;
-  pivot: {
-    order: number;
-  };
-}
-
-interface FileAttachment {
-  id: number;
-  original_name: string;
-  file_path: string;
+  client_name: string;
+  project_name: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  file_path: string | null;
+  file_url: string | null;
+  template_id: number;
+  template_name: string;
+  vulnerabilities: Vulnerability[];
 }
 
 interface Vulnerability {
   id: number;
   name: string;
-  severity: string;
   description: string;
-  impact: string;
-  recommendations: string;
-  files: FileAttachment[];
-  pivot: {
-    order: number;
-    include_evidence: boolean;
-  };
-}
-
-interface Report {
-  id: number;
-  name: string;
-  client: {
-    id: number;
-    name: string;
-  };
-  project: {
-    id: number;
-    name: string;
-  };
-  reportTemplate: {
-    id: number;
-    name: string;
-  };
+  severity: string;
+  cvss_score: number;
   status: string;
-  executive_summary: string;
-  generated_file_path: string | null;
-  file_exists?: boolean;
-  created_at: string;
-  methodologies: Methodology[];
-  findings: Vulnerability[];
-  created_by: {
-    id: number;
-    name: string;
-  };
+  remediation: string;
+  references: string;
 }
 
-export default function Show({ report }: { report: Report }) {
-  const [activeTab, setActiveTab] = useState('summary');
-  const [regenerating, setRegenerating] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const { csrf_token } = usePage().props as any;
-  
+interface PageProps {
+  report: Report;
+}
+
+export default function Show() {
+  const { report } = usePage().props as PageProps;
+  const [isGenerating, setIsGenerating] = useState(false);
+  // Unused: const [activeTab, setActiveTab] = useState<string>('overview');
+  // Unused: const [copied, setCopied] = useState(false);
+  // Unused: const { csrf_token } = usePage().props as unknown;
+
   const breadcrumbs: BreadcrumbItem[] = [
+    {
+      title: 'Dashboard',
+      href: '/dashboard',
+    },
     {
       title: 'Reports',
       href: '/reports',
     },
     {
-      title: report?.name || 'Report Details',
-      href: `/reports/${report?.id || ''}`,
+      title: report.title,
+      href: `/reports/${report.id}`,
+      current: true,
     },
   ];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="outline">Draft</Badge>;
-      case 'generated':
-        return <Badge variant="secondary">Generated</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+  const generateReport = async () => {
+    setIsGenerating(true);
+    try {
+      await axios.post(`/reports/${report.id}/generate`);
+      toast.success('Report generated successfully');
+      router.reload();
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const handleRegenerate = () => {
-    if (!report?.id) return;
-    
-    setRegenerating(true);
-    router.post(route('reports.regenerate', report.id), {}, {
-      onSuccess: () => setRegenerating(false),
-      onError: () => setRegenerating(false),
-    });
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getSeverityBadge = (severity: string) => {
-    const lowerSeverity = severity.toLowerCase();
-    
-    // Using Tailwind's arbitrary values for custom colors
-    return (
-      <span className={`
-        inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-        ${lowerSeverity === 'critical' ? 'bg-red-500 text-white' : ''}
-        ${lowerSeverity === 'high' ? 'bg-orange-500 text-white' : ''}
-        ${lowerSeverity === 'medium' ? 'bg-yellow-500 text-white' : ''}
-        ${lowerSeverity === 'low' ? 'bg-green-500 text-black' : ''}
-        ${lowerSeverity === 'info' ? 'bg-blue-500 text-black' : ''}
-        ${!['critical', 'high', 'medium', 'low', 'info'].includes(lowerSeverity) ? 'bg-gray-500 text-white' : ''}
-      `}>
-        {severity.toUpperCase()}
-      </span>
-    );
-  };
-
-  // Function to handle file download
-  const downloadReport = () => {
-    if (!report?.id) return;
-    
-    // Open in a new window which will force download
-    window.open(`/reports/${report.id}/download`, '_blank');
-  };
-
-  // If report is not fully loaded, show a loading state
-  if (!report || !report.client || !report.project || !report.reportTemplate) {
-    return (
-      <AppLayout breadcrumbs={[{ title: 'Reports', href: '/reports' }]}>
-        <Head title="Loading Report..." />
-        <div className="container mx-auto py-6">
-          <div className="flex justify-center items-center h-64">
-            <p className="text-gray-500">Loading report data...</p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  // Unused: const copyToClipboard = () => {
+  //   navigator.clipboard.writeText(window.location.href);
+  //   // Unused: setCopied(true);
+  //   // Unused: setTimeout(() => setCopied(false), 2000);
+  // };
 
   return (
-    <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title={`Report: ${report.name}`} />
-      <div className="container mx-auto py-6">
-        <div className="mb-6">
-          <Link href={route('reports.index')} className="flex items-center text-sm text-gray-500 hover:text-gray-700">
-            <ArrowLeftIcon className="w-4 h-4 mr-1" />
-            Back to reports
-          </Link>
-        </div>
+    <AppLayout>
+      <Head title={`Report: ${report.title}`} />
+      <div className="container py-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            {breadcrumbs.map((breadcrumb, index) => (
+              <div key={index} className="flex items-center">
+                {index > 0 && <BreadcrumbSeparator />}
+                {breadcrumb.current ? (
+                  <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={breadcrumb.href}>{breadcrumb.title}</Link>
+                  </BreadcrumbLink>
+                )}
+              </div>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{report.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-gray-600">
-                Created on {new Date(report.created_at).toLocaleDateString()} by {report.created_by?.name || 'Unknown'}
-              </p>
-              {getStatusBadge(report.status)}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {report.file_exists && (
-              <Button 
-                variant="default" 
-                className="flex items-center"
-                onClick={downloadReport}
-              >
-                <DownloadIcon className="w-4 h-4 mr-2" />
-                Download Report
-              </Button>
-            )}
-            <Button 
-              variant="outline" 
-              className="flex items-center"
-              onClick={handleRegenerate}
-              disabled={regenerating}
-            >
-              <RefreshCwIcon className={`w-4 h-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
-              Regenerate
+        <div className="flex justify-between items-center mt-4 mb-6">
+          <h1 className="text-3xl font-bold">{report.title}</h1>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/reports">
+                <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                Back to Reports
+              </Link>
             </Button>
-            <Link href={route('reports.edit', report.id)}>
-              <Button className="flex items-center">
-                <PencilIcon className="w-4 h-4 mr-2" />
-                Edit Report
-              </Button>
-            </Link>
+            <Button variant="outline" asChild>
+              <Link href={`/reports/${report.id}/edit`}>
+                <PencilIcon className="h-4 w-4 mr-2" />
+                Edit
+              </Link>
+            </Button>
           </div>
         </div>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Report Summary</CardTitle>
-            <CardDescription>
-              Basic information about this report
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Client</dt>
-                <dd className="text-lg">{report.client.name}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Project</dt>
-                <dd className="text-lg">{report.project.name}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Template</dt>
-                <dd className="text-lg">{report.reportTemplate.name}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="text-lg">{getStatusBadge(report.status)}</dd>
-              </div>
-              <div className="md:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Executive Summary</dt>
-                <dd className="mt-1 text-base whitespace-pre-wrap border p-3 rounded-md bg-gray-50">
-                  {report.executive_summary || 'No executive summary provided.'}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Methodologies</CardTitle>
-              <CardDescription>
-                Testing methodologies included in this report
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {report.methodologies && report.methodologies.length > 0 ? (
-                <div className="space-y-4">
-                  {report.methodologies.map((methodology) => (
-                    <div key={methodology.id} className="border rounded-md p-4">
-                      <h3 className="font-medium text-lg">{methodology.title}</h3>
-                      <p className="mt-2 text-sm whitespace-pre-wrap">{methodology.content}</p>
-                    </div>
-                  ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Report Details</CardTitle>
+                <CardDescription>
+                  Created on {new Date(report.created_at).toLocaleDateString()}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Client</p>
+                    <p>{report.client_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Project</p>
+                    <p>{report.project_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Template</p>
+                    <p>{report.template_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Status</p>
+                    <p className="capitalize">{report.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Created</p>
+                    <p>{new Date(report.created_at).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Last Updated</p>
+                    <p>{new Date(report.updated_at).toLocaleString()}</p>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-gray-500">No methodologies included in this report.</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Findings</CardTitle>
-              <CardDescription>
-                Vulnerabilities included in this report
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {report.findings && report.findings.length > 0 ? (
-                <div className="space-y-4">
-                  {report.findings.map((finding) => (
-                    <div key={finding.id} className="border rounded-md p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium text-lg">{finding.name}</h3>
-                        {getSeverityBadge(finding.severity)}
-                      </div>
-                      
-                      <div className="mt-2 space-y-2">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Description</h4>
-                          <p className="text-sm whitespace-pre-wrap">{finding.description}</p>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Impact</h4>
-                          <p className="text-sm whitespace-pre-wrap">{finding.impact}</p>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Recommendations</h4>
-                          <p className="text-sm whitespace-pre-wrap">{finding.recommendations}</p>
-                        </div>
-                        
-                        {finding.files && finding.files.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Evidence Files</h4>
-                            <ul className="list-disc list-inside text-sm">
-                              {finding.files.map(file => (
-                                <li key={file.id}>{file.original_name}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No findings included in this report.</p>
-              )}
-            </CardContent>
-          </Card>
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Report File</CardTitle>
+                <CardDescription>Download or regenerate the report</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {report.file_path ? (
+                  <div className="flex flex-col gap-2">
+                    <Button asChild className="w-full">
+                      <Link href={report.file_url || '#'} target="_blank">
+                        <DownloadIcon className="h-4 w-4 mr-2" />
+                        Download Report
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={generateReport}
+                      disabled={isGenerating}
+                    >
+                      <RefreshCwIcon className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                      {isGenerating ? 'Regenerating...' : 'Regenerate Report'}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500 mb-4">
+                      The report file hasn't been generated yet or generation failed. Click the "Regenerate" button to create the report file.
+                    </p>
+                    <Button
+                      onClick={generateReport}
+                      disabled={isGenerating}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <RefreshCwIcon className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Generate Report
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        {report.generated_file_path ? (
-          <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
-            <div className="flex">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              <div>
-                <h3 className="text-green-800 font-medium">Report file available</h3>
-                <p className="text-green-700 text-sm">
-                  A report file has been generated. You can download it using the download button above.
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
-            <div className="flex">
-              <RefreshCwIcon className="h-5 w-5 text-yellow-500 mr-2" />
-              <div>
-                <h3 className="text-yellow-800 font-medium">Report file not generated</h3>
-                <p className="text-yellow-700 text-sm">
-                  The report file hasn't been generated yet or generation failed. Click the "Regenerate" button to create the report file.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </AppLayout>
   );

@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeftIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import { ArrowLeftIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon, TrashIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -98,7 +97,7 @@ export default function AddDetails({
       setData('generation_method', 'from_template');
       setData('generate_from_scratch', false);
     }
-  }, []);
+  }, [setData, template_id]);
 
   const handleSelectMethodology = (id: number) => {
     const updatedSelection = selectedMethodologies.includes(id)
@@ -145,7 +144,7 @@ export default function AddDetails({
     setData('findings', updatedFindings);
   };
 
-  const moveItem = (array: any[], index: number, direction: 'up' | 'down'): any[] => {
+  const moveItem = <T,>(array: T[], index: number, direction: 'up' | 'down'): T[] => {
     if (array.length <= 1) return array;
     
     const newArray = [...array];

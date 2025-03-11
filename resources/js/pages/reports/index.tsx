@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusIcon, FileTextIcon, DownloadIcon, PencilIcon, TrashIcon, RefreshCwIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,9 +45,9 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ];
 
-export default function Index({ reports, pagination, error }: { reports: Report[], pagination: Pagination, error: any }) {
+export default function Index({ reports, pagination, error }: { reports: Report[], pagination: Pagination, error: unknown }) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
-  const { csrf_token } = usePage().props as any;
+// Unused:   const { csrf_token } = usePage().props as any;
   
   // Debug logging
   console.log('Reports data received:', reports);

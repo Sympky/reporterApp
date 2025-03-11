@@ -96,7 +96,7 @@ export const templateColumns: ColumnDef<Template>[] = [
           );
         }
         return tags;
-      } catch (e) {
+      } catch {
         return tags;
       }
     }
@@ -104,8 +104,7 @@ export const templateColumns: ColumnDef<Template>[] = [
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => {
-      const template = row.original;
+    cell: () => {
       return (
         <div className="flex items-center space-x-2">
           {/* These components will be replaced at runtime */}

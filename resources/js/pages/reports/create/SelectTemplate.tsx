@@ -7,7 +7,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Separator } from '@/components/ui/separator';
 
 interface Template {
   id: number;
@@ -19,7 +18,7 @@ interface FormData {
   template_id: string;
   generation_method: 'from_scratch' | 'from_template';
   generate_from_scratch: boolean; // Kept for backward compatibility
-  [key: string]: any; // Add index signature to satisfy Inertia's FormDataType constraint
+  [key: string]: unknown; // Add index signature to satisfy Inertia's FormDataType constraint
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -34,7 +33,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function SelectTemplate({ templates }: { templates: Template[] }) {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [ setSelectedTemplateId] = useState<number | null>(null);
   
   const { data, setData, post, processing, errors } = useForm<FormData>({
     template_id: '',
@@ -46,7 +45,7 @@ export default function SelectTemplate({ templates }: { templates: Template[] })
   // This is for backward compatibility
   useEffect(() => {
     setData('generate_from_scratch', data.generation_method === 'from_scratch');
-  }, [data.generation_method]);
+  }, [data.generation_method, setData]);
 
   const handleSelectTemplate = (templateId: string) => {
     setSelectedTemplateId(parseInt(templateId));

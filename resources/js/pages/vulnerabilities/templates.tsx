@@ -60,11 +60,11 @@ export function EditTemplateDialog({ template }: { template: Template }) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSelectChange = (id: string, value: string) => {
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,7 +127,7 @@ export function EditTemplateDialog({ template }: { template: Template }) {
               <textarea
                 id="description"
                 value={data.description}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -185,7 +185,7 @@ export function EditTemplateDialog({ template }: { template: Template }) {
               <textarea
                 id="recommendations"
                 value={data.recommendations}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -197,7 +197,7 @@ export function EditTemplateDialog({ template }: { template: Template }) {
               <textarea
                 id="impact"
                 value={data.impact}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -346,11 +346,11 @@ export function ApplyTemplateButton({ template }: { template: Template }) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSelectChange = (id: string, value: string) => {
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -473,11 +473,11 @@ export function CreateTemplateDialog() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSelectChange = (id: string, value: string) => {
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -539,7 +539,7 @@ export function CreateTemplateDialog() {
               <textarea
                 id="description"
                 value={data.description}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -597,7 +597,7 @@ export function CreateTemplateDialog() {
               <textarea
                 id="recommendations"
                 value={data.recommendations}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -609,7 +609,7 @@ export function CreateTemplateDialog() {
               <textarea
                 id="impact"
                 value={data.impact}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />

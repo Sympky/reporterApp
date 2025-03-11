@@ -67,8 +67,7 @@ export const projectColumns: ColumnDef<Project>[] = [
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => {
-      const project = row.original;
+    cell: () => {
       return (
         <div className="flex items-center space-x-2">
           {/* These components will be replaced at runtime */}

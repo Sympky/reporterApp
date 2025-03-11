@@ -56,12 +56,12 @@ export default function EditProject({ project, clients }: PageProps) {
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setData(name as any, value);
+    setData(name as keyof typeof data, value);
   };
 
   // Handle select changes
   const handleSelectChange = (name: string, value: string) => {
-    setData(name as any, value);
+    setData(name as keyof typeof data, value);
   };
 
   // Handle form submission

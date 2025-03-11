@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,13 +47,8 @@ export default function FileUploader({
   const [selectedFile, setSelectedFile] = useState<FileList | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  // Fetch files when component mounts or fileableId/fileableType changes
-  useEffect(() => {
-    fetchFiles();
-  }, [fileableType, fileableId]);
-
-  // Function to fetch files
-  const fetchFiles = async () => {
+  // Function to fetch files wrapped in useCallback
+  const fetchFiles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get('/files', {
@@ -69,7 +64,12 @@ export default function FileUploader({
     } finally {
       setLoading(false);
     }
-  };
+  }, [fileableType, fileableId]);
+
+  // Fetch files when component mounts or fileableId/fileableType changes
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
 
   // Function to handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -53,11 +53,11 @@ export function EditProjectDialog({ project }: { project: Project }) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSelectChange = (id: string, value: string) => {
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -142,7 +142,7 @@ export function EditProjectDialog({ project }: { project: Project }) {
               <textarea
                 id="description"
                 value={data.description}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -297,11 +297,11 @@ export function CreateProjectDialog() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSelectChange = (id: string, value: string) => {
-    setData(id as any, value);
+    setData(id as keyof typeof data, value);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -385,7 +385,7 @@ export function CreateProjectDialog() {
               <textarea
                 id="description"
                 value={data.description}
-                onChange={handleChange as any}
+                onChange={handleChange}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
