@@ -31,6 +31,7 @@ type Vulnerability = {
   impact_score?: string | null;
   likelihood_score?: string | null;
   remediation_score?: string | null;
+  impact: string;
 };
 
 // Type definition for the page props
@@ -48,8 +49,9 @@ interface PageProps {
     severity: string;
     cvss: number | null;
     cve: string;
-    remediation_steps: string | null;
+    recommendations: string | null;
     impact: string | null;
+    impact_score: string | null;
     references: string | null;
     tags: string | null;
     likelihood_score?: string | null;
@@ -74,6 +76,7 @@ export function EditVulnerabilityDialog({ vulnerability }: { vulnerability: Vuln
     cvss: string;
     cve: string;
     recommendations: string;
+    impact: string;
     discovered_at: string;
     impact_score: string;
     likelihood_score: string;
@@ -90,6 +93,7 @@ export function EditVulnerabilityDialog({ vulnerability }: { vulnerability: Vuln
     cvss: vulnerability.cvss?.toString() || '',
     cve: vulnerability.cve,
     recommendations: vulnerability.remediation || '',
+    impact: vulnerability.impact || '',
     discovered_at: vulnerability.discovered_at ? new Date(vulnerability.discovered_at).toISOString().split('T')[0] : '',
     impact_score: vulnerability.impact_score || '',
     likelihood_score: vulnerability.likelihood_score || '',
@@ -329,6 +333,19 @@ export function EditVulnerabilityDialog({ vulnerability }: { vulnerability: Vuln
               {errors.recommendations && <p className="text-red-500 text-sm">{errors.recommendations}</p>}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="impact">Impact Description</Label>
+              <textarea
+                id="impact"
+                value={data.impact}
+                onChange={handleChange}
+                rows={3}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Describe the business or technical impact of this vulnerability"
+              />
+              {errors.impact && <p className="text-red-500 text-sm">{errors.impact}</p>}
+            </div>
+
             <DialogFooter>
               <Button
                 type="button"
@@ -449,6 +466,7 @@ export function CreateVulnerabilityDialog() {
     cvss: string;
     cve: string;
     recommendations: string;
+    impact: string;
     discovered_at: string;
     impact_score: string;
     likelihood_score: string;
@@ -464,6 +482,7 @@ export function CreateVulnerabilityDialog() {
     cvss: '',
     cve: '',
     recommendations: '',
+    impact: '',
     discovered_at: new Date().toISOString().split('T')[0],
     impact_score: '',
     likelihood_score: '',
@@ -481,12 +500,29 @@ export function CreateVulnerabilityDialog() {
 
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplate(templateId);
+    setError(null); // Clear any existing errors
     
     if (templateId) {
       // Find the selected template
       const template = templates.find(t => t.id.toString() === templateId);
       
       if (template) {
+        // Validate required fields
+        if (!template.name) {
+          setError('Selected template is missing required field: name');
+          return;
+        }
+        
+        if (!template.description) {
+          setError('Selected template is missing required field: description');
+          return;
+        }
+        
+        if (!template.severity) {
+          setError('Selected template is missing required field: severity');
+          return;
+        }
+        
         // Pre-fill form with template data
         setData({
           ...data,
@@ -495,10 +531,13 @@ export function CreateVulnerabilityDialog() {
           severity: template.severity ? template.severity.toLowerCase() : 'low',
           cvss: template.cvss ? template.cvss.toString() : '',
           cve: template.cve || '',
-          recommendations: template.remediation_steps || '',
-          impact_score: template.impact || '',
+          recommendations: template.recommendations || '',
+          impact: template.impact || '',
+          impact_score: template.impact_score || '',
           likelihood_score: template.likelihood_score || '',
           remediation_score: template.remediation_score || '',
+          references: template.references || '',
+          tags: template.tags || '[]',
         });
       }
     }
@@ -765,6 +804,19 @@ export function CreateVulnerabilityDialog() {
               {errors.recommendations && <p className="text-red-500 text-sm">{errors.recommendations}</p>}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="impact">Impact Description</Label>
+              <textarea
+                id="impact"
+                value={data.impact}
+                onChange={handleChange}
+                rows={3}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Describe the business or technical impact of this vulnerability"
+              />
+              {errors.impact && <p className="text-red-500 text-sm">{errors.impact}</p>}
+            </div>
+
             <DialogFooter>
               <Button
                 type="button"
@@ -835,6 +887,7 @@ export default function VulnerabilitiesIndex() {
     impact_score: vulnerability.impact_score,
     likelihood_score: vulnerability.likelihood_score,
     remediation_score: vulnerability.remediation_score,
+    impact: vulnerability.impact,
   }));
   
   return (

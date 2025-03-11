@@ -1,11 +1,11 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { PlusIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import NotesComponent from '@/components/notes-component';
 import FileUploader from '@/components/file-uploader';
+import { toast } from 'sonner';
 
 // Define types for Project, Client, and Vulnerability
 type Client = {
@@ -155,6 +156,7 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
     proof_of_concept: '',
     affected_components: '',
     notes: '',
+    impact: '',
     discovered_at: new Date().toISOString().split('T')[0],
     impact_score: '',
     likelihood_score: '',
@@ -167,20 +169,41 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
     if (templateId) {
       // Find the selected template
       const template = templates.find(t => t.id.toString() === templateId);
+      
       if (template) {
+        // Validate required fields
+        if (!template.name) {
+          toast.error('Selected template is missing required field: name');
+          return;
+        }
+        
+        if (!template.description) {
+          toast.error('Selected template is missing required field: description');
+          return;
+        }
+        
+        if (!template.severity) {
+          toast.error('Selected template is missing required field: severity');
+          return;
+        }
+        
         // Pre-fill form with template data
         setData({
           ...data,
           name: template.name,
           description: template.description || '',
-          severity: template.severity ? template.severity.toLowerCase() : 'low',
+          severity: template.severity || 'low',
           cvss: template.cvss ? template.cvss.toString() : '',
-          remediation_steps: template.remediation_steps || '',
+          cve: template.cve || '',
+          remediation_steps: template.recommendations || '',
           notes: template.notes || '',
+          impact: template.impact || '',
           discovered_at: data.discovered_at,
           impact_score: template.impact_score || '',
           likelihood_score: template.likelihood_score || '',
           remediation_score: template.remediation_score || '',
+          affected_components: template.affected_resources || '',
+          proof_of_concept: '',
         });
       }
     }
@@ -421,6 +444,20 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
               />
               {errors.notes && (
                 <div className="text-sm text-red-500">{errors.notes}</div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="impact">Impact Description</Label>
+              <Textarea
+                id="impact"
+                value={data.impact}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('impact', e.target.value)}
+                rows={3}
+                placeholder="Describe the business or technical impact of this vulnerability"
+              />
+              {errors.impact && (
+                <div className="text-sm text-red-500">{errors.impact}</div>
               )}
             </div>
 
