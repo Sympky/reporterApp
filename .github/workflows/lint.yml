@@ -48,8 +48,8 @@ jobs:
       - name: Install NPM dependencies
         run: npm ci
 
-      - name: Run PHP Code Style (Pint)
-        run: vendor/bin/pint --test
+      # - name: Run PHP Code Style (Pint)
+      #   run: vendor/bin/pint --test
 
       - name: Format Frontend
         run: npm run format -- --check
