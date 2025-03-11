@@ -4,24 +4,8 @@ on:
   workflow_dispatch:  # Add manual trigger
   push:
     branches: [ main, master, develop ]
-    paths:
-      - '**.php'
-      - 'composer.json'
-      - 'composer.lock'
-      - 'phpunit.xml'
-      - '.env.example'
-      - 'database/migrations/**'
-      - 'database/seeders/**'
   pull_request:
     branches: [ main, master, develop ]
-    paths:
-      - '**.php'
-      - 'composer.json'
-      - 'composer.lock'
-      - 'phpunit.xml'
-      - '.env.example'
-      - 'database/migrations/**'
-      - 'database/seeders/**'
 
 jobs:
   laravel-tests:
@@ -104,7 +88,7 @@ jobs:
         VITE_MANIFEST_MOCK: true
 
     - name: Run Unit Tests
-      run: php artisan test tests/Unit --without-tty --coverage-clover=coverage-unit.xml
+      run: php artisan test tests/Unit --coverage-clover=coverage-unit.xml
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"
@@ -113,7 +97,7 @@ jobs:
         XDEBUG_MODE: coverage
 
     - name: Run Feature Tests
-      run: php artisan test tests/Feature --without-tty --coverage-clover=coverage-feature.xml
+      run: php artisan test tests/Feature --coverage-clover=coverage-feature.xml
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: ":memory:"

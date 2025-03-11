@@ -4,32 +4,8 @@ on:
   workflow_dispatch:  # Add manual trigger
   push:
     branches: [ main, master, develop ]
-    paths:
-      - '**.php'
-      - '**.js'
-      - '**.jsx'
-      - '**.ts'
-      - '**.tsx'
-      - '**.css'
-      - '**.scss'
-      - 'composer.json'
-      - 'composer.lock'
-      - 'package.json'
-      - 'package-lock.json'
   pull_request:
     branches: [ main, master, develop ]
-    paths:
-      - '**.php'
-      - '**.js'
-      - '**.jsx'
-      - '**.ts'
-      - '**.tsx'
-      - '**.css'
-      - '**.scss'
-      - 'composer.json'
-      - 'composer.lock'
-      - 'package.json'
-      - 'package-lock.json'
 
 permissions:
   contents: read

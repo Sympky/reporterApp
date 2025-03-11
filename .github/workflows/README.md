@@ -8,7 +8,8 @@ This directory contains GitHub Actions workflow configurations for automated tes
 
 A streamlined workflow that runs unit and feature tests separately to avoid the issues with running them together. It:
 
-- Triggers only on relevant file changes to avoid unnecessary runs
+- Runs on every push and pull request to main, master, and develop branches
+- Can be triggered manually through the GitHub Actions UI
 - Sets up PHP 8.2 with necessary extensions
 - Configures a MySQL service for tests that require a database
 - Uses caching for faster Composer dependency installation
@@ -23,11 +24,22 @@ A streamlined workflow that runs unit and feature tests separately to avoid the 
 
 A workflow focused on code style and linting:
 
-- Triggers only on relevant file changes
+- Runs on every push and pull request to main, master, and develop branches
+- Can be triggered manually through the GitHub Actions UI
 - Runs Laravel Pint for PHP code style checks in test mode
 - Runs frontend formatting checks
 - Runs linting checks for JavaScript/TypeScript code
 - Uses proper caching for both PHP and Node.js dependencies
+
+### 3. Status Check (`status-check.yml`)
+
+A simple status check workflow that verifies GitHub Actions is working:
+
+- Runs on every push and pull request to main, master, and develop branches
+- Can be triggered manually through the GitHub Actions UI
+- Provides basic environment information
+- Lists repository files in the root directory
+- Checks if PHP is available on the runner
 
 ## Key Improvements
 
@@ -35,9 +47,10 @@ A workflow focused on code style and linting:
    - Now uses `php artisan test` directly with appropriate flags
    - Runs unit and feature tests separately, which solves the failure issue
 
-2. **More targeted workflow triggers**:
-   - Only runs workflows when relevant files change
-   - Reduces unnecessary CI/CD runs
+2. **Better workflow triggers**:
+   - All workflows run on every push and pull request
+   - All workflows can be triggered manually
+   - No path restrictions, ensuring workflows always run
 
 3. **Improved dependency caching**:
    - Faster workflow execution
@@ -65,7 +78,6 @@ The workflows use specialized environment configurations:
 
 ## Common Options for Test Commands
 
-- `--without-tty`: Prevents issues with terminal output in CI environments
 - `--coverage-clover=file.xml`: Generates code coverage reports
 
 ## Troubleshooting
@@ -84,5 +96,10 @@ If you encounter issues:
 3. **Vite-related errors**:
    - Check that the mock Vite manifest is being created correctly
    - Make sure your tests aren't relying on specific asset behavior
+
+4. **Workflows not running**:
+   - Check if any workflow files have syntax errors
+   - Make sure GitHub Actions is enabled in your repository settings
+   - Verify branch names match the configured branches in workflows
 
 For more information on GitHub Actions, see the [official documentation](https://docs.github.com/en/actions). 
