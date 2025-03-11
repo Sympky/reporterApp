@@ -89,7 +89,26 @@ class ProjectController extends Controller
             ->map(function ($vulnerability) {
                 // Parse JSON fields
                 $evidence = !empty($vulnerability->evidence) ? json_decode($vulnerability->evidence, true) : [];
-                $tags = !empty($vulnerability->tags) ? json_decode($vulnerability->tags, true) : [];
+                
+                // Handle tags - check if it's already an array before trying to decode
+                $tags = [];
+                if (!empty($vulnerability->tags)) {
+                    if (is_array($vulnerability->tags)) {
+                        $tags = $vulnerability->tags;
+                    } else {
+                        try {
+                            $tags = json_decode($vulnerability->tags, true) ?: [];
+                        } catch (\Exception $e) {
+                            // If decoding fails, use as is
+                            $tags = is_string($vulnerability->tags) ? [$vulnerability->tags] : [];
+                            \Illuminate\Support\Facades\Log::warning('Failed to decode tags', [
+                                'vulnerability_id' => $vulnerability->id,
+                                'tags' => $vulnerability->tags,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                }
                 
                 return [
                     'id' => $vulnerability->id,

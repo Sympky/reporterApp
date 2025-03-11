@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, EyeIcon, PencilIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import NotesComponent from '@/components/notes-component';
 import FileUploader from '@/components/file-uploader';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 // Define types for Project, Client, and Vulnerability
 type Client = {
@@ -272,6 +273,16 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
         )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input 
+            type="hidden" 
+            name="_token" 
+            value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}
+          />
+          <input 
+            type="hidden" 
+            name="project_id" 
+            value={projectId}
+          />
           <div className="grid grid-cols-1 gap-4">
             <div className="grid grid-cols-1 gap-2">
               <Label htmlFor="name">Vulnerability Name</Label>
@@ -512,6 +523,261 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
   );
 }
 
+// Type for the import response
+type ImportResponse = {
+  success: boolean;
+  message: string;
+  imported: number;
+  errors?: any;
+};
+
+// Import Vulnerability Dialog Component
+function ImportVulnerabilityDialog({ projectId }: { projectId: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const page = usePage<{
+    flash: {
+      success?: string;
+      error?: string;
+      import_results?: any;
+    }
+  }>();
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    file: null as File | null,
+    project_id: projectId,
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setData('file', e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setData('file', e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrorDetails(null);
+
+    if (!data.file) {
+      toast.error('Please select a file to import.');
+      return;
+    }
+
+    console.log("Submitting file:", data.file.name);
+    
+    // Create FormData object for file upload
+    const formData = new FormData();
+    formData.append('file', data.file);
+    formData.append('project_id', projectId.toString());
+    
+    // Get CSRF token from the meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    console.log("Using CSRF token:", csrfToken);
+    
+    // Use axios for the request
+    axios.post(route('vulnerabilities.import'), formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-CSRF-TOKEN': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      },
+      withCredentials: true
+    })
+    .then(response => {
+      console.log('Import response (success):', response.data);
+      
+      // Handle successful response
+      const responseData = response.data;
+      if (responseData && responseData.success === true) {
+        setIsOpen(false);
+        reset();
+        toast.success(`Successfully imported ${responseData.imported} vulnerability/vulnerabilities.`);
+        // Reload page to show the newly imported data
+        window.location.reload();
+      } else {
+        // Show error message for API-level errors
+        const message = responseData?.message || 'Import failed. Please check the file format.';
+        toast.error(message);
+        
+        // Handle validation errors
+        if (responseData?.errors) {
+          console.error('Import validation errors:', responseData.errors);
+          
+          // Format a more helpful error message about headers
+          if (responseData.errors.required_headers && responseData.errors.found_headers) {
+            const requiredHeaders = responseData.errors.required_headers.join(', ');
+            const foundHeaders = responseData.errors.normalized_found?.join(', ') || responseData.errors.found_headers.join(', ');
+            
+            const headerErrorMsg = `Your CSV file has incorrect headers.\nRequired: ${requiredHeaders}\nFound: ${foundHeaders}`;
+            setErrorDetails(headerErrorMsg);
+            
+            toast.error('Your CSV file has incorrect headers - see error details in dialog', {
+              duration: 10000, // Show for 10 seconds
+            });
+          } else {
+            // Save generic error details for display
+            setErrorDetails(JSON.stringify(responseData.errors, null, 2));
+          }
+        }
+        
+        // Keep dialog open to show error details
+        setIsOpen(true);
+      }
+    })
+    .catch(error => {
+      console.error('Import error:', error);
+      
+      // Get any error message from the server
+      let errorMessage = 'An error occurred while importing the vulnerabilities.';
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      }
+      
+      toast.error(errorMessage);
+      setErrorDetails(`Error: ${errorMessage}`);
+      setIsOpen(true); // Keep dialog open
+    });
+  };
+
+  const downloadSampleTemplate = () => {
+    window.location.href = route('vulnerabilities.sample-template');
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" onClick={() => {
+          setIsOpen(true);
+          setErrorDetails(null);
+        }}>
+          <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
+          Import Vulnerabilities
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Import Vulnerabilities</DialogTitle>
+          <DialogDescription>
+            Upload a CSV or Excel file with vulnerabilities to import into this project.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input 
+            type="hidden" 
+            name="_token" 
+            value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}
+          />
+          <input 
+            type="hidden" 
+            name="project_id" 
+            value={projectId}
+          />
+          <div className="space-y-2">
+            <Label htmlFor="file">Vulnerability File (CSV, XLS, XLSX)</Label>
+            <div
+              className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer ${
+                dragActive ? 'border-primary bg-primary/5' : 'border-input'
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleFileDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                id="file"
+                name="file"
+                type="file"
+                accept=".csv,.xls,.xlsx"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <ArrowUpTrayIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Drag and drop a file here, or click to browse
+              </p>
+              {data.file && (
+                <p className="mt-2 text-sm font-medium text-primary">{data.file.name}</p>
+              )}
+            </div>
+            {errors.file && <p className="text-red-500 text-sm">{errors.file}</p>}
+          </div>
+          
+          {errorDetails && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <h4 className="text-sm font-medium text-red-800 mb-1">Error Details:</h4>
+              <div className="text-xs font-mono overflow-auto max-h-32 whitespace-pre-wrap text-red-800">
+                {errorDetails}
+              </div>
+            </div>
+          )}
+          
+          <div className="text-sm text-muted-foreground">
+            <p>Make sure your file includes these headers:</p>
+            <p className="font-mono text-xs mt-1">
+              name, description, severity, cvss, cve, recommendations, impact, references, tags
+            </p>
+            <Button 
+              type="button" 
+              variant="link" 
+              size="sm" 
+              className="p-0 h-auto text-xs mt-1" 
+              onClick={downloadSampleTemplate}
+            >
+              Download sample template
+            </Button>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={processing}>
+              {processing ? 'Importing...' : 'Import Vulnerabilities'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ProjectShow({ project, vulnerabilities, templates = [] }: PageProps) {
   // Calculate vulnerability statistics
   const criticalCount = vulnerabilities.filter(v => v.severity === 'Critical').length;
@@ -554,6 +820,7 @@ export default function ProjectShow({ project, vulnerabilities, templates = [] }
                 Edit Project
               </Button>
             </Link>
+            <ImportVulnerabilityDialog projectId={project.id} />
             <AddVulnerabilityDialog projectId={project.id} templates={templates} />
           </div>
         </div>

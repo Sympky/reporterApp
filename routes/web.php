@@ -35,11 +35,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Vulnerability routes
     Route::get('vulnerabilities', [VulnerabilityController::class, 'allVulnerabilities'])->name('vulnerabilities.index');
     Route::post('vulnerabilities', [VulnerabilityController::class, 'storeVulnerability'])->name('vulnerabilities.store');
+    // Sample template download route
+    Route::get('vulnerabilities/sample-template', [VulnerabilityController::class, 'downloadVulnerabilitySampleTemplate'])
+        ->name('vulnerabilities.sample-template');
     Route::resource('vulnerabilities', VulnerabilityController::class)->except(['index', 'store']);
+    // Vulnerability import route for a specific project
+    Route::post('vulnerabilities/import', [VulnerabilityController::class, 'importVulnerabilities'])
+        ->name('vulnerabilities.import');
 
     // Vulnerability templates routes
     Route::get('vulnerability-templates', [VulnerabilityTemplateController::class, 'index'])->name('vulnerability.templates');
     Route::post('vulnerability-templates', [VulnerabilityTemplateController::class, 'store'])->name('vulnerability.templates.store');
+    // Template import route
+    Route::post('vulnerability-templates/import', [VulnerabilityController::class, 'importTemplates'])
+        ->name('vulnerability.templates.import');
+    // Sample template route
+    Route::get('vulnerability-templates/sample-template', [VulnerabilityController::class, 'downloadTemplateSampleTemplate'])
+        ->name('vulnerability.templates.sample-template');
+    // Routes with parameters
     Route::get('vulnerability-templates/{template}/edit', [VulnerabilityTemplateController::class, 'edit'])->name('vulnerability.templates.edit');
     Route::put('vulnerability-templates/{template}', [VulnerabilityTemplateController::class, 'update'])->name('vulnerability.templates.update');
     Route::post('vulnerability-templates/apply', [VulnerabilityTemplateController::class, 'apply'])->name('vulnerability.templates.apply');
