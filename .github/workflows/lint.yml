@@ -1,6 +1,7 @@
 name: Code Quality Checks
 
 on:
+  workflow_dispatch:  # Add manual trigger
   push:
     branches: [ main, master, develop ]
     paths:

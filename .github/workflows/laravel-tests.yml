@@ -1,6 +1,7 @@
 name: Laravel Tests
 
 on:
+  workflow_dispatch:  # Add manual trigger
   push:
     branches: [ main, master, develop ]
     paths:
