@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ClientTest extends TestCase
 {
@@ -46,7 +47,7 @@ class ClientTest extends TestCase
         })->name('clients.edit');
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_clients_list()
     {
         // Given we have clients in the database
@@ -66,7 +67,7 @@ class ClientTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_the_create_client_form()
     {
         $response = $this->actingAs($this->user)
@@ -78,7 +79,7 @@ class ClientTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_create_a_new_client()
     {
         $clientData = [
@@ -104,7 +105,7 @@ class ClientTest extends TestCase
         $response->assertRedirect(route('clients.index'));
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_a_client()
     {
         // Create a client
@@ -123,7 +124,7 @@ class ClientTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_the_edit_client_form()
     {
         // Create a client
@@ -142,7 +143,7 @@ class ClientTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_update_a_client()
     {
         // Create a client
@@ -177,7 +178,7 @@ class ClientTest extends TestCase
         $response->assertRedirect(route('clients.index'));
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_delete_a_client()
     {
         // Create a client
@@ -199,7 +200,7 @@ class ClientTest extends TestCase
         $response->assertRedirect(route('clients.index'));
     }
 
-    /** @test */
+    #[Test]
     public function a_user_cannot_delete_a_client_with_projects()
     {
         // Create a client
@@ -231,7 +232,7 @@ class ClientTest extends TestCase
         $response->assertSessionHas('error', 'Cannot delete the client because they have associated projects.');
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_get_latest_clients_as_json()
     {
         // Create several clients

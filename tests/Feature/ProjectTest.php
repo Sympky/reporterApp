@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ProjectTest extends TestCase
 {
@@ -63,7 +64,7 @@ class ProjectTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_projects_list()
     {
         // Create some projects for the client
@@ -83,7 +84,7 @@ class ProjectTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_client_projects_as_json()
     {
         // Create some projects for the client
@@ -102,7 +103,7 @@ class ProjectTest extends TestCase
         $response->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_create_a_new_project()
     {
         // Project data
@@ -129,7 +130,7 @@ class ProjectTest extends TestCase
         $response->assertRedirect(route('projects.index'));
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_a_project()
     {
         // Create a project
@@ -149,7 +150,7 @@ class ProjectTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_view_the_edit_project_form()
     {
         // Create a project
@@ -169,7 +170,7 @@ class ProjectTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_update_a_project()
     {
         // Create a project
@@ -204,7 +205,7 @@ class ProjectTest extends TestCase
         $response->assertRedirect(route('projects.index'));
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_delete_a_project()
     {
         // Create a project
@@ -227,7 +228,7 @@ class ProjectTest extends TestCase
         $response->assertStatus(204);
     }
 
-    /** @test */
+    #[Test]
     public function a_user_can_get_latest_projects_as_json()
     {
         // Create several projects
