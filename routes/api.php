@@ -41,4 +41,11 @@ Route::get('sidebar/clients-with-projects', [ClientController::class, 'sidebarCl
 
 // Latest clients with projects for sidebar
 
+Route::middleware('auth:sanctum')->group(function () {
+    // Route to fetch report templates
+    Route::get('/report-templates', function () {
+        return App\Models\ReportTemplate::orderBy('created_at', 'desc')->get();
+    });
+});
+
 

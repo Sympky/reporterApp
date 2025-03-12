@@ -204,28 +204,31 @@ class ReportTemplateTest extends TestCase
     #[Test]
     public function a_user_can_delete_a_report_template()
     {
-        // Create a template
+        // Create a test file in a temporary location
+        $tempFile = tempnam(sys_get_temp_dir(), 'test_template_') . '.docx';
+        file_put_contents($tempFile, 'Test template content');
+        
+        // Create a template with the test file
         $template = ReportTemplate::factory()->create([
             'created_by' => $this->user->id,
-            'updated_by' => $this->user->id,
-            'file_path' => 'public/storage/templates/template.docx',
-        ]);
-
-        // Use fake storage
-        Storage::fake('public');
-        Storage::disk('public')->put('storage/templates/template.docx', 'Test content');
-
-        // When a user deletes the template
-        $response = $this->actingAs($this->user)
-            ->delete(route('report-templates.destroy', $template));
-
-        // Then the template should be deleted from the database
-        $this->assertDatabaseMissing('report_templates', [
-            'id' => $template->id,
+            'file_path' => 'public/templates/test_template.docx',
         ]);
         
-        // And the file should also be deleted (if the path extraction is working correctly)
-        // Note: This test might be a bit tricky due to the path extraction in the controller
+        // Create the actual file in storage for proper deletion testing
+        Storage::fake('public');
+        Storage::disk('public')->put('templates/test_template.docx', 'Test template content');
+        
+        // Authenticate as the test user
+        $this->actingAs($this->user);
+        
+        // Send a delete request
+        $response = $this->delete(route('report-templates.destroy', $template));
+        
+        // Assert database does not have the template anymore
+        $this->assertDatabaseMissing('report_templates', ['id' => $template->id]);
+        
+        // Assert the file is deleted
+        $this->assertFalse(Storage::disk('public')->exists('templates/test_template.docx'), 'Template file still exists in storage');
         
         // We're expecting a redirect with a success message
         $response->assertRedirect(route('report-templates.index'));

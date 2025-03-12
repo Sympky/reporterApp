@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class ReportTemplateController extends Controller
 {
@@ -132,29 +133,47 @@ class ReportTemplateController extends Controller
     }
 
     /**
-     * Remove the specified template from storage.
+     * Remove the specified report template from storage.
+     *
+     * @param  \App\Models\ReportTemplate  $reportTemplate
+     * @return \Illuminate\Http\Response
      */
     public function destroy(ReportTemplate $reportTemplate)
     {
-        // Delete the template file
-        // Extract disk from path
-        $path = $reportTemplate->file_path;
-        $disk = 'local';
-        
-        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
-            $disk = $matches[1];
-            $path = $matches[2];
+        try {
+            // Check if this template is used by any reports
+            if ($reportTemplate->reports()->exists()) {
+                return back()->with('error', 'Cannot delete template because it is used by one or more reports.');
+            }
+            
+            // Extract disk and path information
+            $path = $reportTemplate->file_path;
+            $disk = 'local';
+            
+            if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+                $disk = $matches[1];
+                $path = $matches[2];
+            }
+            
+            // Try to delete the file if it exists
+            if (Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+            
+            // Delete the database record regardless of whether the file exists
+            // This ensures UI cleanup even if files were manually deleted
+            $reportTemplate->delete();
+            
+            return redirect()->route('report-templates.index')->with('success', 'Template deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error('Template deletion error: ' . $e->getMessage(), [
+                'template_id' => $reportTemplate->id,
+                'user_id' => auth()->id() ?? null,
+                'user_email' => auth()->user() ? auth()->user()->email : null,
+            ]);
+            
+            return back()->with('error', 'Failed to delete template. Please try again later.');
         }
-        
-        if (Storage::disk($disk)->exists($path)) {
-            Storage::disk($disk)->delete($path);
-        }
-
-        // Delete the template record
-        $reportTemplate->delete();
-
-        return redirect()->route('report-templates.index')
-            ->with('success', 'Template deleted successfully.');
     }
 
     /**

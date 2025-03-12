@@ -25,11 +25,11 @@ class ReportTemplate extends Model
     ];
 
     /**
-     * Get the reports using this template.
+     * Get the reports that use this template.
      */
-    public function reports(): HasMany
+    public function reports()
     {
-        return $this->hasMany(Report::class);
+        return $this->hasMany(Report::class, 'template_id');
     }
 
     /**

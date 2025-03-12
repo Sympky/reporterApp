@@ -14,19 +14,15 @@ class Report extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array
      */
     protected $fillable = [
-        'name',
-        'report_template_id',
-        'client_id',
-        'project_id',
-        'executive_summary',
-        'status',
-        'generated_file_path',
+        'title',
+        'client_name',
+        'template_id',
+        'file_path',
         'created_by',
         'updated_by',
-        'generate_from_scratch',
     ];
 
     /**
@@ -41,9 +37,9 @@ class Report extends Model
     /**
      * Get the template used for this report.
      */
-    public function reportTemplate(): BelongsTo
+    public function template()
     {
-        return $this->belongsTo(ReportTemplate::class);
+        return $this->belongsTo(ReportTemplate::class, 'template_id');
     }
 
     /**
@@ -103,7 +99,7 @@ class Report extends Model
     /**
      * Get the user who created the report.
      */
-    public function createdBy(): BelongsTo
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
@@ -111,7 +107,7 @@ class Report extends Model
     /**
      * Get the user who last updated the report.
      */
-    public function updatedBy(): BelongsTo
+    public function updatedBy()
     {
         return $this->belongsTo(User::class, 'updated_by');
     }

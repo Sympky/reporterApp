@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class ReportController extends Controller
 {
@@ -674,5 +675,185 @@ class ReportController extends Controller
             echo "Error: " . $e->getMessage();
             exit;
         }
+    }
+
+    /**
+     * Generate a report document from a template.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function generateReport(Request $request)
+    {
+        // Validate request data
+        $request->validate([
+            'template_id' => 'required|exists:report_templates,id',
+            'report_title' => 'required|string|max:255',
+            'client_name' => 'required|string|max:255',
+            'methodologies' => 'required|array|min:1',
+            'methodologies.*.title' => 'required|string|max:255',
+            'methodologies.*.description' => 'required|string',
+            'methodologies.*.findings' => 'required|array|min:1',
+            'methodologies.*.findings.*.title' => 'required|string|max:255',
+            'methodologies.*.findings.*.severity' => 'required|string|in:Critical,High,Medium,Low,Informational',
+            'methodologies.*.findings.*.description' => 'required|string',
+            'methodologies.*.findings.*.recommendation' => 'required|string',
+        ]);
+
+        // Get the template
+        $template = ReportTemplate::findOrFail($request->template_id);
+        
+        // Extract the template file path
+        $path = $template->file_path;
+        $disk = 'local';
+        
+        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+            $disk = $matches[1];
+            $path = $matches[2];
+        }
+        
+        $templatePath = Storage::disk($disk)->path($path);
+        
+        // Prepare output filename and path
+        $outputFilename = 'report_' . date('Y-m-d_H-i-s') . '.docx';
+        $outputPath = 'reports/' . $outputFilename;
+        $fullOutputPath = Storage::disk('public')->path($outputPath);
+        
+        // Create output directory if it doesn't exist
+        $outputDir = dirname($fullOutputPath);
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
+        }
+        
+        // Prepare data for the report
+        $reportData = [
+            'metadata' => [
+                'report_title' => $request->report_title,
+                'report_date' => date('F j, Y'),
+                'report_author' => Auth::user()->name,
+                'client_name' => $request->client_name,
+                'assessment_period' => $request->assessment_period ?? date('F Y'),
+            ],
+            'methodologies' => $request->methodologies,
+        ];
+        
+        try {
+            // Generate the report using the exact method
+            $templateProcessor = new TemplateProcessor($templatePath);
+            
+            // Set metadata values
+            foreach ($reportData['metadata'] as $key => $value) {
+                $templateProcessor->setValue($key, $value);
+            }
+            
+            // PHASE 1: Clone the methodology blocks with indexed placeholders
+            $blockReplacements = [];
+            $i = 0;
+            
+            foreach($reportData['methodologies'] as $methodology) {
+                $blockReplacements[] = [
+                    'methodology_title' => $methodology['title'],
+                    'methodology_description' => $methodology['description'],
+                    'finding_title' => '${finding_title_'.$i.'}',
+                    'finding_severity' => '${finding_severity_'.$i.'}',
+                    'finding_description' => '${finding_description_'.$i.'}',
+                    'finding_recommendation' => '${finding_recommendation_'.$i.'}'
+                ];
+                $i++;
+            }
+            
+            // Clone the methodology block
+            $templateProcessor->cloneBlock(
+                'block_methodologies', 
+                count($blockReplacements), 
+                true, 
+                false, 
+                $blockReplacements
+            );
+            
+            // PHASE 2: Clone the table rows for findings within each methodology
+            $i = 0;
+            foreach($reportData['methodologies'] as $methodology) {
+                if (isset($methodology['findings']) && !empty($methodology['findings'])) {
+                    $values = [];
+                    
+                    foreach($methodology['findings'] as $finding) {
+                        $values[] = [
+                            "finding_title_{$i}" => $finding['title'],
+                            "finding_severity_{$i}" => $finding['severity'],
+                            "finding_description_{$i}" => $finding['description'],
+                            "finding_recommendation_{$i}" => $finding['recommendation']
+                        ];
+                    }
+                    
+                    // Clone the rows for this methodology
+                    if (!empty($values)) {
+                        $templateProcessor->cloneRowAndSetValues("finding_title_{$i}", $values);
+                    }
+                }
+                
+                $i++;
+            }
+            
+            // Save the document
+            $templateProcessor->saveAs($fullOutputPath);
+            
+            // Create a record of this report in the database
+            $report = new Report();
+            $report->title = $request->report_title;
+            $report->client_name = $request->client_name;
+            $report->template_id = $template->id;
+            $report->file_path = 'public/' . $outputPath;
+            $report->created_by = Auth::id();
+            $report->save();
+            
+            // Return success response with download link
+            return response()->json([
+                'success' => true,
+                'message' => 'Report generated successfully',
+                'report_id' => $report->id,
+                'download_url' => route('reports.download', $report->id)
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate report: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Download a generated report.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function downloadReport($id)
+    {
+        $report = Report::findOrFail($id);
+        
+        // Extract disk and path
+        $path = $report->file_path;
+        $disk = 'local';
+        
+        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+            $disk = $matches[1];
+            $path = $matches[2];
+        }
+        
+        if (!Storage::disk($disk)->exists($path)) {
+            return back()->with('error', 'Report file not found.');
+        }
+        
+        // Create filename for download
+        $fileName = str_replace(' ', '_', $report->title) . '.docx';
+        
+        // Return download response
+        return Storage::disk($disk)->download($path, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 }
