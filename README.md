@@ -12,14 +12,6 @@ A comprehensive web application for security consultants and penetration testers
 - **Notes & File Management**: Attach notes and files to projects and vulnerabilities
 - **Dashboard**: Get a quick overview of your security assessment activities
 
-## 🛠️ Tech Stack
-
-- **Backend**: Laravel 12 (PHP 8.2+)
-- **Frontend**: React 19 with TypeScript
-- **UI Components**: Radix UI, Headless UI, Tailwind CSS
-- **Authentication**: Laravel Sanctum
-- **Form Handling**: Inertia.js
-
 ## 📋 Prerequisites
 
 - PHP 8.2 or higher
@@ -39,7 +31,7 @@ Follow these steps to get the Reporter App up and running on your local machine:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/reporterApp.git
+git clone https://github.com/Sympky/reporterApp.git
 cd reporterApp
 ```
 
@@ -107,7 +99,7 @@ This application includes Docker configurations for easy setup.
 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/reporterApp.git
+git clone https://github.com/Sympky/reporterApp.git
 cd reporterApp
 ```
 
@@ -164,64 +156,7 @@ docker-compose logs -f
 docker-compose up -d --build
 ```
 
-## 🚀 Development Workflow
 
-To start the development environment with hot-reloading:
-
-```bash
-composer dev
-```
-
-This command will start:
-- Laravel development server
-- Queue worker
-- Log watcher
-- Vite development server for frontend
-
-## 📊 Database Structure
-
-The application includes the following key data models:
-
-- **Users**: Authentication and user management
-- **Clients**: Client organizations information
-- **Projects**: Security assessment projects
-- **Vulnerabilities**: Security vulnerabilities with severity ratings
-- **Methodologies**: Testing methodologies and procedures
-- **Reports**: Generated security reports
-- **Report Templates**: Customizable templates for reports
-- **Files**: Attached files and evidence
-- **Notes**: Notes for projects and vulnerabilities
-
-## 🔒 Authentication
-
-The application uses Laravel Sanctum for API token authentication. Register and login endpoints are provided through the standard Laravel authentication routes.
-
-## 📝 Usage
-
-### Client Management
-
-1. Navigate to the Clients section
-2. Add new clients with their contact information
-3. View and manage existing clients
-
-### Project Management
-
-1. Create new projects and assign them to clients
-2. Track project status and details
-3. Attach vulnerabilities and methodologies to projects
-
-### Vulnerability Management
-
-1. Document vulnerabilities discovered during assessments
-2. Categorize by severity and type
-3. Link vulnerabilities to projects
-
-### Report Generation
-
-1. Select a project
-2. Choose a report template
-3. Customize the report content
-4. Generate and download as DOCX
 
 ## 🧪 Testing and Code Coverage
 
@@ -235,42 +170,23 @@ This project uses PHPUnit for testing. Tests are organized into two groups:
 To run all tests:
 
 ```bash
-./run-tests.sh
+php artisan test
 ```
 
 To run specific test groups:
 
 ```bash
-./run-tests.sh tests/Unit
-./run-tests.sh tests/Feature
+php artisan test tests/Unit
+php artisan test tests/Feature
 ```
 
 To run an individual test file:
 
 ```bash
-./run-tests.sh tests/Unit/Http/Controllers/ProjectControllerTest.php
+php artisan test tests/Unit/Http/Controllers/ProjectControllerTest.php
 ```
 
-### Code Coverage
 
-To generate code coverage reports, you need Xdebug installed and configured on your PHP environment.
-
-1. **Install Xdebug**:
-   - For Ubuntu/Debian: `sudo apt-get install php-xdebug`
-   - For macOS with Homebrew: `brew install php@8.2-xdebug`
-   - For Windows with XAMPP/WAMP: Enable Xdebug in php.ini
-
-2. **Generate Coverage Report**:
-
-```bash
-./run-tests.sh tests/Unit --coverage-html coverage
-```
-
-This will generate an HTML coverage report in the `coverage` directory. Open `coverage/index.html` in your browser to view it.
-
-Notes:
-- If Xdebug is not installed, the tests will still run, but without generating coverage reports
-- The CI/CD pipeline on GitHub Actions is configured to generate coverage reports automatically
 
 ## 🤝 Contributing
 
