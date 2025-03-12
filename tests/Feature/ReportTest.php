@@ -377,8 +377,8 @@ class ReportTest extends TestCase
     #[Test]
     public function a_user_can_generate_a_report_from_scratch()
     {
-        // Mark this test as skipped for now until DocxGenerationService is implemented
-        $this->markTestSkipped('DocxGenerationService not implemented yet');
+        // Mark this test as skipped for now until implementation is complete
+        $this->markTestSkipped('Implementation in progress ');
         
         // Create a report
         $report = Report::factory()->create([
@@ -400,8 +400,8 @@ class ReportTest extends TestCase
     #[Test]
     public function a_user_can_generate_a_report_from_template()
     {
-        // Mark this test as skipped for now until DocxGenerationService is implemented
-        $this->markTestSkipped('DocxGenerationService not implemented yet');
+        // Mark this test as skipped for now until implementation is complete
+        $this->markTestSkipped('Implementation in progress');
         
         // Create a report
         $report = Report::factory()->create([
