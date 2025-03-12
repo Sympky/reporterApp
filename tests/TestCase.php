@@ -55,7 +55,25 @@ abstract class TestCase extends BaseTestCase
                 'auth-reset-password-mock.js',
                 'auth-verify-email-mock.js',
                 'auth-confirm-password-mock.js',
-                'settings-profile-mock.js'
+                'settings-profile-mock.js',
+                // Report related mock files
+                'reports-templates-index-mock.js',
+                'reports-templates-create-mock.js',
+                'reports-templates-edit-mock.js',
+                'reports-templates-show-mock.js',
+                'reports-create-selecttemplate-mock.js',
+                'reports-create-selectclientproject-mock.js',
+                'reports-create-adddetails-mock.js',
+                'reports-index-mock.js',
+                'reports-edit-mock.js',
+                'reports-show-mock.js',
+                // Vulnerability related mock files
+                'vulnerability-templates-index-mock.js',
+                'vulnerability-templates-edit-mock.js',
+                'vulnerabilities-index-mock.js',
+                'vulnerabilities-create-mock.js',
+                'vulnerabilities-edit-mock.js',
+                'vulnerabilities-show-mock.js'
             ];
             
             // Create each mock file

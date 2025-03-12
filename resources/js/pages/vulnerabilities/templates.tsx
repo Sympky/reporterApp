@@ -4,15 +4,16 @@ import { useForm, usePage } from '@inertiajs/react';
 import { Head } from '@inertiajs/react';
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusIcon, PencilIcon, TrashIcon, ArrowRightCircleIcon } from '@heroicons/react/24/outline';
-import { Template, templateColumns } from '@/components/templateColumns';
+import { PlusIcon, PencilIcon, TrashIcon, ArrowRightCircleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { templateColumns } from '@/components/templateColumns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { type BreadcrumbItem } from '@/types';
+import axios from 'axios';
 
 // Type definition for Template (already defined in templateColumns.tsx)
 type Template = {
@@ -664,6 +665,383 @@ export function CreateTemplateDialog() {
   );
 }
 
+// ImportTemplateDialog component
+export function ImportTemplateDialog() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  
+  const { data, setData, reset, errors } = useForm({
+    file: null as File | null,
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setData('file', file);
+      validateCsvHeaders(file);
+    }
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setData('file', file);
+      validateCsvHeaders(file);
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Helper function to validate CSV headers before upload
+  const validateCsvHeaders = (file: File) => {
+    // Only validate CSV files
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      return;
+    }
+
+    // Reset any previous error
+    setErrorDetails(null);
+
+    const requiredHeaders = ['name', 'description', 'severity'];
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      if (!event.target?.result) return;
+      
+      try {
+        // Get the first line which should contain headers
+        const content = event.target.result as string;
+        const lines = content.split(/\r\n|\n/);
+        if (lines.length === 0) {
+          setErrorDetails('CSV file appears to be empty. Please check the file.');
+          return;
+        }
+
+        // Parse the header line
+        const headerLine = lines[0];
+        const headers = headerLine.split(',').map(h => h.trim().toLowerCase()
+          .replace(/^["'](.*)["']$/, '$1')); // Remove quotes if present
+
+        console.log('CSV Headers:', headers);
+
+        // Check for required headers
+        const missingHeaders = requiredHeaders.filter(required => {
+          // Check for exact match
+          if (headers.includes(required)) return false;
+          
+          // Check for variations
+          const variations = {
+            'name': ['title', 'header', 'vuln', 'vulnerability'],
+            'description': ['desc', 'details', 'summary'],
+            'severity': ['risk', 'level', 'impact', 'priority']
+          };
+          
+          // Check if any variation of the required header exists
+          return !(variations[required as keyof typeof variations]?.some(v => 
+            headers.some(h => h.includes(v))
+          ));
+        });
+
+        if (missingHeaders.length > 0) {
+          setErrorDetails(`Your CSV appears to be missing these required headers: ${missingHeaders.join(', ')}.\n\nPlease ensure your CSV has headers for: name, description, and severity.\n\nThe headers found were: ${headers.join(', ')}`);
+          return;
+        }
+        
+        // All checks passed!
+        console.log('CSV headers validation passed');
+      } catch (err) {
+        console.error('Error validating CSV:', err);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrorDetails(null);
+
+    if (!data.file) {
+      toast.error('Please select a file to import.');
+      return;
+    }
+
+    console.log("Submitting file:", data.file.name);
+    
+    // Get the CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    
+    // Create a FormData object for file upload
+    const formData = new FormData();
+    formData.append('file', data.file);
+    formData.append('_token', csrfToken);
+    
+    // Set processing state
+    setIsProcessing(true);
+    
+    // Use axios directly for file upload
+    axios.post(route('vulnerability.templates.import'), formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => {
+      console.log('Import response:', response.data);
+      setIsProcessing(false);
+      
+      const responseData = response.data;
+      
+      if (responseData && responseData.success === true) {
+        setIsOpen(false);
+        reset();
+        toast.success(`Successfully imported ${responseData.imported} template(s).`);
+        // Reload page to show the newly imported data
+        window.location.reload();
+      } else {
+        // Show error message for API-level errors
+        const message = responseData?.message || 'Import failed. Please check the file format.';
+        toast.error(message);
+        
+        // Handle different types of errors
+        handleImportErrors(responseData?.errors);
+        
+        // Keep dialog open to show error details
+        setIsOpen(true);
+      }
+    })
+    .catch(error => {
+      console.error('Import error:', error);
+      setIsProcessing(false);
+      
+      // Get any error message from the server
+      let errorMessage = 'An error occurred while importing the templates.';
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+      setErrorDetails(`Error: ${errorMessage}`);
+      setIsOpen(true); // Keep dialog open
+    });
+  };
+  
+  // Helper function to format error messages for display with proper type checking
+  const handleImportErrors = (errors: unknown) => {
+    if (!errors) return;
+    
+    console.error('Import validation errors:', errors);
+    
+    // Type guard to check if errors is an object
+    if (typeof errors === 'object' && errors !== null) {
+      const errorObj = errors as Record<string, unknown>;
+      
+      // Check if it's the header validation error format
+      if ('required_headers' in errorObj && 'found_headers' in errorObj) {
+        // Handle header errors
+        const requiredHeaders = Array.isArray(errorObj.required_headers) 
+          ? errorObj.required_headers.join(', ') 
+          : String(errorObj.required_headers);
+          
+        const foundHeaders = Array.isArray(errorObj.normalized_found) 
+          ? errorObj.normalized_found.join(', ') 
+          : Array.isArray(errorObj.found_headers) 
+            ? errorObj.found_headers.join(', ')
+            : String(errorObj.found_headers);
+        
+        setErrorDetails(`Your CSV file has incorrect headers.\nRequired: ${requiredHeaders}\nFound: ${foundHeaders}`);
+      }
+      // Check if it's an array of row errors
+      else if (Array.isArray(errors) && errors.length > 0) {
+        // Handle row-specific errors
+        const formattedErrors = errors.map((rowError) => {
+          if (typeof rowError !== 'object' || rowError === null) return '';
+          
+          const rowErrorObj = rowError as Record<string, unknown>;
+          const row = rowErrorObj.row;
+          
+          if (!('errors' in rowErrorObj) || typeof rowErrorObj.errors !== 'object' || rowErrorObj.errors === null) {
+            return `Row ${row}: Unknown error`;
+          }
+          
+          const errorDetails = rowErrorObj.errors as Record<string, unknown>;
+          
+          // Format different types of errors
+          let errorMessages: string[] = [];
+          
+          // Check each possible error type
+          if ('general' in errorDetails && Array.isArray(errorDetails.general)) {
+            errorMessages = errorMessages.concat(errorDetails.general);
+          }
+          
+          if ('missing_field' in errorDetails && Array.isArray(errorDetails.missing_field)) {
+            errorMessages = errorMessages.concat(errorDetails.missing_field);
+          }
+          
+          if ('severity' in errorDetails && Array.isArray(errorDetails.severity)) {
+            errorMessages = errorMessages.concat(errorDetails.severity);
+          }
+          
+          // Handle other validation errors
+          Object.entries(errorDetails).forEach(([field, msgs]) => {
+            if (!['general', 'missing_field', 'severity'].includes(field)) {
+              if (Array.isArray(msgs)) {
+                errorMessages = errorMessages.concat(msgs.map(msg => `${field}: ${msg}`));
+              }
+            }
+          });
+          
+          return `Row ${row}: ${errorMessages.join(', ')}`;
+        }).filter(Boolean).join('\n\n');
+        
+        setErrorDetails(
+          `The following rows had errors:\n\n${formattedErrors}\n\n` +
+          `Tip: Make sure all required fields are present in your CSV file. Check for proper formatting of fields like severity.`
+        );
+      } else {
+        // Generic error display
+        setErrorDetails(JSON.stringify(errors, null, 2));
+      }
+    } else {
+      // Handle non-object errors
+      setErrorDetails(`Error: ${String(errors)}`);
+    }
+  };
+
+  const downloadSampleTemplate = () => {
+    window.location.href = route('vulnerability.templates.sample-template');
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" onClick={() => {
+          setIsOpen(true);
+          setErrorDetails(null);
+        }}>
+          <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
+          Import Templates
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Import Templates</DialogTitle>
+          <DialogDescription>
+            Upload a CSV or Excel file with vulnerability templates to import.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input 
+            type="hidden" 
+            name="_token" 
+            value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}
+          />
+          <div className="space-y-2">
+            <Label htmlFor="file">Template File (CSV, XLS, XLSX)</Label>
+            <div
+              className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer ${
+                dragActive ? 'border-primary bg-primary/5' : 'border-input'
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleFileDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                id="file"
+                name="file"
+                type="file"
+                accept=".csv,.xls,.xlsx"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <ArrowUpTrayIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Drag and drop a file here, or click to browse
+              </p>
+              {data.file && (
+                <p className="mt-2 text-sm font-medium text-primary">{data.file.name}</p>
+              )}
+            </div>
+            {errors.file && <p className="text-red-500 text-sm">{errors.file}</p>}
+          </div>
+          
+          {errorDetails && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <h4 className="text-sm font-medium text-red-800 mb-1">Error Details:</h4>
+              <div className="text-xs font-mono overflow-auto max-h-32 whitespace-pre-wrap text-red-800">
+                {errorDetails}
+              </div>
+            </div>
+          )}
+          
+          <div className="text-sm text-muted-foreground">
+            <p>Make sure your file includes these headers:</p>
+            <p className="font-mono text-xs mt-1">
+              name, description, severity, cvss, cve, recommendations, impact, references, tags
+            </p>
+            <div className="mt-2 text-xs space-y-1">
+              <p><strong>Required fields:</strong> <span className="font-mono">name, description, severity</span></p>
+              <p><strong>Optional fields:</strong> <span className="font-mono">cvss, cve, recommendations, impact, references, tags</span></p>
+            </div>
+            <Button 
+              type="button" 
+              variant="link" 
+              size="sm" 
+              className="p-0 h-auto text-xs mt-1" 
+              onClick={downloadSampleTemplate}
+            >
+              Download sample template
+            </Button>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isProcessing}>
+              {isProcessing ? 'Importing...' : 'Import Templates'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -707,7 +1085,10 @@ export default function TemplatesIndex() {
             <h1 className="text-2xl font-bold">Vulnerability Templates</h1>
             <p className="text-muted-foreground">Reusable vulnerability templates that can be applied to any project</p>
           </div>
-          <CreateTemplateDialog />
+          <div className="flex space-x-2">
+            <ImportTemplateDialog />
+            <CreateTemplateDialog />
+          </div>
         </div>
         
         <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border">

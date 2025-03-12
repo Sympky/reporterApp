@@ -30,6 +30,10 @@ A comprehensive web application for security consultants and penetration testers
 
 ## 🔧 Installation
 
+You can install the Reporter App either manually or using Docker.
+
+### Option 1: Manual Installation
+
 Follow these steps to get the Reporter App up and running on your local machine:
 
 ### 1. Clone the repository
@@ -88,6 +92,77 @@ php artisan serve
 ```
 
 The application will be available at http://localhost:8000
+
+### Option 2: Docker Installation
+
+This application includes Docker configurations for easy setup.
+
+#### Prerequisites
+
+- Docker
+- Docker Compose
+
+#### Steps
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/reporterApp.git
+cd reporterApp
+```
+
+2. Create a copy of the environment file
+
+```bash
+cp .env.example .env
+```
+
+3. Update the environment variables in `.env` for Docker:
+
+```
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=reporter_app
+DB_USERNAME=reporter
+DB_PASSWORD=your_secure_password
+```
+
+4. Start the Docker containers
+
+```bash
+docker-compose up -d
+```
+
+5. Set up the application
+
+```bash
+# Enter the app container
+docker-compose exec app bash
+
+# Inside the container, run:
+php artisan key:generate
+php artisan migrate
+php artisan storage:link
+exit
+```
+
+6. Access the application
+
+The application will be available at http://localhost:8000
+
+#### Useful Docker Commands
+
+```bash
+# Stop the containers
+docker-compose down
+
+# View container logs
+docker-compose logs -f
+
+# Rebuild containers after making changes to Dockerfile
+docker-compose up -d --build
+```
 
 ## 🚀 Development Workflow
 

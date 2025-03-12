@@ -60,19 +60,119 @@ jobs:
       run: |
         mkdir -p public/build/assets
         
-        # Create a minimal mock manifest
+        # Create a comprehensive mock manifest with all needed components
         echo '{
           "resources/js/app.tsx": {
             "file": "assets/app-mock.js",
             "src": "resources/js/app.tsx",
             "isEntry": true,
             "css": ["assets/app-mock.css"]
+          },
+          "resources/js/pages/auth/Login.tsx": {
+            "file": "assets/auth-login-mock.js",
+            "src": "resources/js/pages/auth/Login.tsx"
+          },
+          "resources/js/pages/auth/Register.tsx": {
+            "file": "assets/auth-register-mock.js",
+            "src": "resources/js/pages/auth/Register.tsx"
+          },
+          "resources/js/pages/auth/ForgotPassword.tsx": {
+            "file": "assets/auth-forgot-password-mock.js",
+            "src": "resources/js/pages/auth/ForgotPassword.tsx"
+          },
+          "resources/js/pages/auth/ResetPassword.tsx": {
+            "file": "assets/auth-reset-password-mock.js",
+            "src": "resources/js/pages/auth/ResetPassword.tsx"
+          },
+          "resources/js/pages/auth/VerifyEmail.tsx": {
+            "file": "assets/auth-verify-email-mock.js",
+            "src": "resources/js/pages/auth/VerifyEmail.tsx"
+          },
+          "resources/js/pages/auth/ConfirmPassword.tsx": {
+            "file": "assets/auth-confirm-password-mock.js",
+            "src": "resources/js/pages/auth/ConfirmPassword.tsx"
+          },
+          "resources/js/pages/Profile/Edit.tsx": {
+            "file": "assets/profile-edit-mock.js",
+            "src": "resources/js/pages/Profile/Edit.tsx"
+          },
+          "resources/js/pages/Profile/Partials/DeleteUserForm.tsx": {
+            "file": "assets/profile-delete-user-form-mock.js",
+            "src": "resources/js/pages/Profile/Partials/DeleteUserForm.tsx"
+          },
+          "resources/js/pages/Profile/Partials/UpdatePasswordForm.tsx": {
+            "file": "assets/profile-update-password-form-mock.js",
+            "src": "resources/js/pages/Profile/Partials/UpdatePasswordForm.tsx"
+          },
+          "resources/js/pages/Profile/Partials/UpdateProfileInformationForm.tsx": {
+            "file": "assets/profile-update-profile-information-form-mock.js",
+            "src": "resources/js/pages/Profile/Partials/UpdateProfileInformationForm.tsx"
+          },
+          "resources/js/pages/Dashboard.tsx": {
+            "file": "assets/dashboard-mock.js",
+            "src": "resources/js/pages/Dashboard.tsx"
+          },
+          "resources/js/pages/VulnerabilityTemplates/Index.tsx": {
+            "file": "assets/vulnerability-templates-index-mock.js",
+            "src": "resources/js/pages/VulnerabilityTemplates/Index.tsx"
+          },
+          "resources/js/pages/VulnerabilityTemplates/Create.tsx": {
+            "file": "assets/vulnerability-templates-create-mock.js",
+            "src": "resources/js/pages/VulnerabilityTemplates/Create.tsx"
+          },
+          "resources/js/pages/VulnerabilityTemplates/Edit.tsx": {
+            "file": "assets/vulnerability-templates-edit-mock.js",
+            "src": "resources/js/pages/VulnerabilityTemplates/Edit.tsx"
+          },
+          "resources/js/pages/Vulnerabilities/Index.tsx": {
+            "file": "assets/vulnerabilities-index-mock.js",
+            "src": "resources/js/pages/Vulnerabilities/Index.tsx"
+          },
+          "resources/js/pages/Vulnerabilities/Create.tsx": {
+            "file": "assets/vulnerabilities-create-mock.js",
+            "src": "resources/js/pages/Vulnerabilities/Create.tsx"
+          },
+          "resources/js/pages/Vulnerabilities/Edit.tsx": {
+            "file": "assets/vulnerabilities-edit-mock.js",
+            "src": "resources/js/pages/Vulnerabilities/Edit.tsx"
+          },
+          "resources/js/pages/Vulnerabilities/Show.tsx": {
+            "file": "assets/vulnerabilities-show-mock.js",
+            "src": "resources/js/pages/Vulnerabilities/Show.tsx"
+          },
+          "resources/js/pages/reports/templates/index.tsx": {
+            "file": "assets/reports-templates-index-mock.js",
+            "src": "resources/js/pages/reports/templates/index.tsx"
+          },
+          "resources/js/pages/reports/templates/create.tsx": {
+            "file": "assets/reports-templates-create-mock.js",
+            "src": "resources/js/pages/reports/templates/create.tsx"
+          },
+          "resources/js/pages/reports/templates/edit.tsx": {
+            "file": "assets/reports-templates-edit-mock.js",
+            "src": "resources/js/pages/reports/templates/edit.tsx"
+          },
+          "resources/js/pages/reports/create/index.tsx": {
+            "file": "assets/reports-create-index-mock.js",
+            "src": "resources/js/pages/reports/create/index.tsx"
+          },
+          "resources/js/pages/reports/create/SelectTemplate.tsx": {
+            "file": "assets/reports-create-selecttemplate-mock.js",
+            "src": "resources/js/pages/reports/create/SelectTemplate.tsx"
+          },
+          "resources/js/pages/reports/create/SelectClientProject.tsx": {
+            "file": "assets/reports-create-selectclientproject-mock.js",
+            "src": "resources/js/pages/reports/create/SelectClientProject.tsx"
           }
         }' > public/build/manifest.json
         
-        # Create minimal mock assets
+        # Create all needed mock asset files
         echo '// Mock JS file' > public/build/assets/app-mock.js
         echo '/* Mock CSS file */' > public/build/assets/app-mock.css
+        
+        for file in auth-login-mock.js auth-register-mock.js auth-forgot-password-mock.js auth-reset-password-mock.js auth-verify-email-mock.js auth-confirm-password-mock.js profile-edit-mock.js profile-delete-user-form-mock.js profile-update-password-form-mock.js profile-update-profile-information-form-mock.js dashboard-mock.js vulnerability-templates-index-mock.js vulnerability-templates-create-mock.js vulnerability-templates-edit-mock.js vulnerabilities-index-mock.js vulnerabilities-create-mock.js vulnerabilities-edit-mock.js vulnerabilities-show-mock.js reports-templates-index-mock.js reports-templates-create-mock.js reports-templates-edit-mock.js reports-create-index-mock.js reports-create-selecttemplate-mock.js reports-create-selectclientproject-mock.js; do
+          echo "// Mock JS file for ${file}" > "public/build/assets/${file}"
+        done
 
     - name: Create SQLite database
       run: |

@@ -22,3 +22,21 @@ yarn-error.log
 /.vscode
 /.zed
 notes.txt
+
+# Development utility scripts
+run-tests.sh
+test-factories.php
+/resources/report-templates/report_template_example.html
+
+# Debug and temporary files
+*.log
+*.bak
+*.tmp
+debug_*.php
+temp_*
+
+# Don't ignore Docker files
+!docker/
+!Dockerfile
+!docker-compose.yml
+!.dockerignore
