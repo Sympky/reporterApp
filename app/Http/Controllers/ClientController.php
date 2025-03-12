@@ -184,4 +184,12 @@ class ClientController extends Controller
     {
         return Client::orderBy('created_at', 'desc')->get();
     }
+    
+    /**
+     * Get all projects for a specific client
+     */
+    public function clientProjects(Client $client)
+    {
+        return response()->json($client->projects);
+    }
 }
