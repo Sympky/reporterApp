@@ -672,15 +672,8 @@ export function ImportTemplateDialog() {
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
-  const page = usePage<{
-    flash: {
-      success?: string;
-      error?: string;
-      import_results?: any;
-    }
-  }>();
-
-  const { data, setData, post, processing, errors, reset } = useForm({
+  
+  const { data, setData, reset, errors } = useForm({
     file: null as File | null,
   });
 
@@ -859,58 +852,85 @@ export function ImportTemplateDialog() {
     });
   };
   
-  // Helper function to format error messages for display
-  const handleImportErrors = (errors: any) => {
+  // Helper function to format error messages for display with proper type checking
+  const handleImportErrors = (errors: unknown) => {
     if (!errors) return;
     
     console.error('Import validation errors:', errors);
     
-    if (errors.required_headers && errors.found_headers) {
-      // Handle header errors
-      const requiredHeaders = errors.required_headers.join(', ');
-      const foundHeaders = errors.normalized_found?.join(', ') || errors.found_headers.join(', ');
+    // Type guard to check if errors is an object
+    if (typeof errors === 'object' && errors !== null) {
+      const errorObj = errors as Record<string, unknown>;
       
-      setErrorDetails(`Your CSV file has incorrect headers.\nRequired: ${requiredHeaders}\nFound: ${foundHeaders}`);
-    } else if (Array.isArray(errors) && errors.length > 0) {
-      // Handle row-specific errors
-      const formattedErrors = errors.map((rowError: any) => {
-        const row = rowError.row;
-        const errorDetails = rowError.errors;
+      // Check if it's the header validation error format
+      if ('required_headers' in errorObj && 'found_headers' in errorObj) {
+        // Handle header errors
+        const requiredHeaders = Array.isArray(errorObj.required_headers) 
+          ? errorObj.required_headers.join(', ') 
+          : String(errorObj.required_headers);
+          
+        const foundHeaders = Array.isArray(errorObj.normalized_found) 
+          ? errorObj.normalized_found.join(', ') 
+          : Array.isArray(errorObj.found_headers) 
+            ? errorObj.found_headers.join(', ')
+            : String(errorObj.found_headers);
         
-        // Format different types of errors
-        let errorMessages: string[] = [];
-        
-        if (errorDetails.general) {
-          errorMessages = errorMessages.concat(errorDetails.general);
-        }
-        
-        if (errorDetails.missing_field) {
-          errorMessages = errorMessages.concat(errorDetails.missing_field);
-        }
-        
-        if (errorDetails.severity) {
-          errorMessages = errorMessages.concat(errorDetails.severity);
-        }
-        
-        // Handle other validation errors
-        Object.entries(errorDetails).forEach(([field, msgs]) => {
-          if (!['general', 'missing_field', 'severity'].includes(field)) {
-            if (Array.isArray(msgs)) {
-              errorMessages = errorMessages.concat(msgs.map(msg => `${field}: ${msg}`));
-            }
+        setErrorDetails(`Your CSV file has incorrect headers.\nRequired: ${requiredHeaders}\nFound: ${foundHeaders}`);
+      }
+      // Check if it's an array of row errors
+      else if (Array.isArray(errors) && errors.length > 0) {
+        // Handle row-specific errors
+        const formattedErrors = errors.map((rowError) => {
+          if (typeof rowError !== 'object' || rowError === null) return '';
+          
+          const rowErrorObj = rowError as Record<string, unknown>;
+          const row = rowErrorObj.row;
+          
+          if (!('errors' in rowErrorObj) || typeof rowErrorObj.errors !== 'object' || rowErrorObj.errors === null) {
+            return `Row ${row}: Unknown error`;
           }
-        });
+          
+          const errorDetails = rowErrorObj.errors as Record<string, unknown>;
+          
+          // Format different types of errors
+          let errorMessages: string[] = [];
+          
+          // Check each possible error type
+          if ('general' in errorDetails && Array.isArray(errorDetails.general)) {
+            errorMessages = errorMessages.concat(errorDetails.general);
+          }
+          
+          if ('missing_field' in errorDetails && Array.isArray(errorDetails.missing_field)) {
+            errorMessages = errorMessages.concat(errorDetails.missing_field);
+          }
+          
+          if ('severity' in errorDetails && Array.isArray(errorDetails.severity)) {
+            errorMessages = errorMessages.concat(errorDetails.severity);
+          }
+          
+          // Handle other validation errors
+          Object.entries(errorDetails).forEach(([field, msgs]) => {
+            if (!['general', 'missing_field', 'severity'].includes(field)) {
+              if (Array.isArray(msgs)) {
+                errorMessages = errorMessages.concat(msgs.map(msg => `${field}: ${msg}`));
+              }
+            }
+          });
+          
+          return `Row ${row}: ${errorMessages.join(', ')}`;
+        }).filter(Boolean).join('\n\n');
         
-        return `Row ${row}: ${errorMessages.join(', ')}`;
-      }).join('\n\n');
-      
-      setErrorDetails(
-        `The following rows had errors:\n\n${formattedErrors}\n\n` +
-        `Tip: Make sure all required fields are present in your CSV file. Check for proper formatting of fields like severity.`
-      );
+        setErrorDetails(
+          `The following rows had errors:\n\n${formattedErrors}\n\n` +
+          `Tip: Make sure all required fields are present in your CSV file. Check for proper formatting of fields like severity.`
+        );
+      } else {
+        // Generic error display
+        setErrorDetails(JSON.stringify(errors, null, 2));
+      }
     } else {
-      // Generic error display
-      setErrorDetails(JSON.stringify(errors, null, 2));
+      // Handle non-object errors
+      setErrorDetails(`Error: ${String(errors)}`);
     }
   };
 

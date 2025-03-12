@@ -523,29 +523,14 @@ function AddVulnerabilityDialog({ projectId, templates = [] }: { projectId: numb
   );
 }
 
-// Type for the import response
-type ImportResponse = {
-  success: boolean;
-  message: string;
-  imported: number;
-  errors?: any;
-};
-
 // Import Vulnerability Dialog Component
 function ImportVulnerabilityDialog({ projectId }: { projectId: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
-  const page = usePage<{
-    flash: {
-      success?: string;
-      error?: string;
-      import_results?: any;
-    }
-  }>();
-
-  const { data, setData, post, processing, errors, reset } = useForm({
+  
+  const { data, setData, processing, errors, reset } = useForm({
     file: null as File | null,
     project_id: projectId,
   });
