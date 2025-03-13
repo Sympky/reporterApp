@@ -33,7 +33,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function SelectTemplate({ templates }: { templates: Template[] }) {
-  const [ setSelectedTemplateId] = useState<number | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   
   const { data, setData, post, processing, errors } = useForm<FormData>({
     template_id: '',

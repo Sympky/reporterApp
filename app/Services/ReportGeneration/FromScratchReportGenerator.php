@@ -95,8 +95,8 @@ class FromScratchReportGenerator implements ReportGeneratorInterface
                 $section->addTitle("Methodology", 1);
                 
                 foreach ($methodologies as $methodology) {
-                    $section->addTitle($methodology->name ?? 'Untitled Methodology', 2);
-                    $section->addText($methodology->description ?? 'No description provided.');
+                    $section->addTitle($methodology->title ?? 'Untitled Methodology', 2);
+                    $section->addText($methodology->content ?? 'No description provided.');
                     $section->addTextBreak(1);
                 }
                 
@@ -143,14 +143,16 @@ class FromScratchReportGenerator implements ReportGeneratorInterface
             $fileName = ReportGenerationUtils::generateUniqueFilename($report);
             $saveDirectory = 'reports';
             $savePath = $saveDirectory . '/' . $fileName;
-            
+            // Use the public disk for storing reports, consistent with our approach
+            $disk = 'public';
             // Ensure the reports directory exists
-            if (!ReportGenerationUtils::prepareDirectory($saveDirectory)) {
+            if (!ReportGenerationUtils::prepareDirectory($saveDirectory, $disk)) {
                 return ReportGenerationUtils::generateEmergencyReport($report);
             }
             
-            // Full path to save the document
-            $fullSavePath = storage_path('app/public/' . $savePath);
+            // Use the public disk for storing reports, consistent with our approach
+            $disk = 'public';
+            $fullSavePath = Storage::disk($disk)->path($savePath);
             
             // Create writer and save
             try {
@@ -164,14 +166,14 @@ class FromScratchReportGenerator implements ReportGeneratorInterface
                     throw new \Exception("Failed to create file");
                 }
                 
-                // Update report with the file path
-                if (!ReportGenerationUtils::updateReportWithFilePath($report, 'public/' . $savePath)) {
+                // Update report with the file path - store as relative to the disk
+                if (!ReportGenerationUtils::updateReportWithFilePath($report, $savePath, $disk)) {
                     throw new \Exception("Failed to update report record");
                 }
                 
-                Log::info("From scratch report generated at: public/{$savePath}");
+                Log::info("From scratch report generated at: {$disk}/{$savePath}");
                 
-                return 'public/' . $savePath;
+                return $disk . '/' . $savePath;
             } catch (\Exception $e) {
                 Log::error("Error saving document: " . $e->getMessage());
                 return ReportGenerationUtils::generateEmergencyReport($report);

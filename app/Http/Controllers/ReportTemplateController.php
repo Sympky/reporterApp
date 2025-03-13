@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ReportTemplateController extends Controller
 {
@@ -48,16 +50,18 @@ class ReportTemplateController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Store the template file in the public disk
-        $file = $request->file('template_file');
-        $path = $file->store('templates', 'public'); // Use just 'templates' to avoid double storage
-        
-        // Create the template record with correct path
+        // Create the template record
         $template = new ReportTemplate();
         $template->name = $request->name;
         $template->description = $request->description;
-        $template->file_path = 'public/storage/templates/' . basename($path); // Store with consistent path format
         $template->created_by = Auth::id();
+
+        // Replace complex file path handling with proper Storage usage
+        if ($request->hasFile('template_file')) {
+            $path = $request->file('template_file')->store('templates', 'public');
+            $template->file_path = $path;
+        }
+
         $template->save();
 
         return redirect()->route('report-templates.index')
@@ -99,32 +103,23 @@ class ReportTemplateController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Update the template file if provided
-        if ($request->hasFile('template_file')) {
-            // Delete the old file
-            // Extract disk from path
-            $path = $reportTemplate->file_path;
-            $disk = 'local';
-            
-            if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
-                $disk = $matches[1];
-                $path = $matches[2];
-            }
-            
-            if (Storage::disk($disk)->exists($path)) {
-                Storage::disk($disk)->delete($path);
-            }
-
-            // Store the new file in public disk
-            $file = $request->file('template_file');
-            $newPath = $file->store('templates', 'public'); // Use just 'templates' to avoid double storage
-            $reportTemplate->file_path = 'public/storage/templates/' . basename($newPath); // Store with consistent path format
-        }
-
         // Update the template record
         $reportTemplate->name = $request->name;
         $reportTemplate->description = $request->description;
         $reportTemplate->updated_by = Auth::id();
+
+        // Replace complex file path handling with proper Storage usage
+        if ($request->hasFile('template_file')) {
+            // Remove old file if it exists
+            if ($reportTemplate->file_path) {
+                Storage::disk('public')->delete($reportTemplate->file_path);
+            }
+            
+            // Store new file
+            $path = $request->file('template_file')->store('templates', 'public');
+            $reportTemplate->file_path = $path;
+        }
+
         $reportTemplate->save();
 
         return redirect()->route('report-templates.index')
@@ -136,25 +131,33 @@ class ReportTemplateController extends Controller
      */
     public function destroy(ReportTemplate $reportTemplate)
     {
-        // Delete the template file
-        // Extract disk from path
-        $path = $reportTemplate->file_path;
-        $disk = 'local';
-        
-        if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
-            $disk = $matches[1];
-            $path = $matches[2];
-        }
-        
-        if (Storage::disk($disk)->exists($path)) {
-            Storage::disk($disk)->delete($path);
-        }
+        try {
+            DB::beginTransaction();
+            
+            // First, find any reports that use this template and detach the relationship
+            // Assuming your reports table has a report_template_id column
+            // Update this table and column name to match your actual structure
+            DB::table('reports')->where('report_template_id', $reportTemplate->id)
+                ->update(['report_template_id' => null]);
+            
+            // Delete the template file
+            if ($reportTemplate->file_path) {
+                Storage::disk('public')->delete($reportTemplate->file_path);
+            }
 
-        // Delete the template record
-        $reportTemplate->delete();
+            // Delete the template record
+            $reportTemplate->delete();
+            
+            DB::commit();
 
-        return redirect()->route('report-templates.index')
-            ->with('success', 'Template deleted successfully.');
+            return redirect()->route('report-templates.index')
+                ->with('success', 'Template deleted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('report-templates.index')
+                ->with('error', 'Failed to delete template: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -163,38 +166,36 @@ class ReportTemplateController extends Controller
     public function download(ReportTemplate $reportTemplate)
     {
         try {
-            // Extract disk from path
-            $path = $reportTemplate->file_path;
-            $disk = 'local';
-            
-            if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
-                $disk = $matches[1];
-                $path = $matches[2];
+            // Fix the file path by removing the 'public/' prefix if it exists
+            $filePath = $reportTemplate->file_path;
+            if (strpos($filePath, 'public/storage/') === 0) {
+                $filePath = str_replace('public/storage/', '', $filePath);
+            } else if (strpos($filePath, 'storage/') === 0) {
+                $filePath = str_replace('storage/', '', $filePath);
             }
             
-            if (!Storage::disk($disk)->exists($path)) {
+            // Check if file exists
+            if (!Storage::disk('public')->exists($filePath)) {
+                Log::error('Template file not found: ' . $filePath);
                 return redirect()->back()->with('error', 'Template file not found.');
             }
             
-            // Get full path to file
-            $fullPath = Storage::disk($disk)->path($path);
-            
-            // Create filename for download
-            $fileName = $reportTemplate->name . '.docx';
+            // Get physical path
+            $fullPath = Storage::disk('public')->path($filePath);
             
             // Return download response
             return response()->download(
                 $fullPath, 
-                $fileName, 
+                $reportTemplate->name . '.docx', 
                 [
                     'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-                    'Pragma' => 'no-cache',
+                    'Content-Disposition' => 'attachment; filename="' . $reportTemplate->name . '.docx"',
+                    'Cache-Control' => 'no-cache',
                 ]
             );
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Template download error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error downloading template: ' . $e->getMessage());
+            Log::error('Error downloading template: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to download template: ' . $e->getMessage());
         }
     }
 }
