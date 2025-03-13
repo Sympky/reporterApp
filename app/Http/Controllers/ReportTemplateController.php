@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ReportTemplateController extends Controller
 {
@@ -130,16 +131,33 @@ class ReportTemplateController extends Controller
      */
     public function destroy(ReportTemplate $reportTemplate)
     {
-        // Delete the template file
-        if ($reportTemplate->file_path) {
-            Storage::disk('public')->delete($reportTemplate->file_path);
+        try {
+            DB::beginTransaction();
+            
+            // First, find any reports that use this template and detach the relationship
+            // Assuming your reports table has a report_template_id column
+            // Update this table and column name to match your actual structure
+            DB::table('reports')->where('report_template_id', $reportTemplate->id)
+                ->update(['report_template_id' => null]);
+            
+            // Delete the template file
+            if ($reportTemplate->file_path) {
+                Storage::disk('public')->delete($reportTemplate->file_path);
+            }
+
+            // Delete the template record
+            $reportTemplate->delete();
+            
+            DB::commit();
+
+            return redirect()->route('report-templates.index')
+                ->with('success', 'Template deleted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('report-templates.index')
+                ->with('error', 'Failed to delete template: ' . $e->getMessage());
         }
-
-        // Delete the template record
-        $reportTemplate->delete();
-
-        return redirect()->route('report-templates.index')
-            ->with('success', 'Template deleted successfully.');
     }
 
     /**
