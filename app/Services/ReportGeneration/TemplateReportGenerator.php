@@ -32,69 +32,58 @@ class TemplateReportGenerator implements ReportGeneratorInterface
                 return ReportGenerationUtils::generateEmergencyReport($report);
             }
             
-            // Get the template file path
+            // Get the template file path - this should be stored as a relative path
             $templatePath = $report->reportTemplate->file_path;
             
-            Log::info("Original template path: {$templatePath}");
+            Log::info("Original template path from database: {$templatePath}");
             
-            // Check if file exists at original path
-            $fileExists = Storage::exists($templatePath);
-            Log::info("File exists at original path: " . ($fileExists ? 'Yes' : 'No'));
+            // Determine the correct disk - templates should be stored in 'public' disk
+            $disk = 'public';
+            
+            // Remove any disk prefix from the path if present
+            if (preg_match('#^public/(.+)$#', $templatePath, $matches)) {
+                $templatePath = $matches[1];
+                Log::info("Adjusted template path by removing 'public/' prefix: {$templatePath}");
+            }
+            
+            // Check if file exists
+            $fileExists = Storage::disk($disk)->exists($templatePath);
+            Log::info("File exists in {$disk} disk with path '{$templatePath}': " . ($fileExists ? 'Yes' : 'No'));
             
             if (!$fileExists) {
-                // Path correction logic
-                $correctedPath = null;
+                // Try some alternative paths for backward compatibility
+                $possiblePaths = [
+                    $templatePath,
+                    'storage/' . $templatePath,
+                    str_replace('storage/', '', $templatePath),
+                    'templates/' . basename($templatePath)
+                ];
                 
-                // Case 1: Missing 'storage' in path (public/templates/...)
-                if (preg_match('#^public/templates/(.+)$#', $templatePath, $matches)) {
-                    $correctedPath = 'public/storage/templates/' . $matches[1];
-                    Log::info("Trying corrected path (added storage): {$correctedPath}");
-                    
-                    if (Storage::exists($correctedPath)) {
-                        $templatePath = $correctedPath;
+                foreach ($possiblePaths as $path) {
+                    Log::info("Trying alternative path: {$path}");
+                    if (Storage::disk($disk)->exists($path)) {
+                        $templatePath = $path;
                         $fileExists = true;
-                    }
-                }
-                
-                // Case 2: Has 'storage' but no 'public' (storage/templates/...)
-                if (!$fileExists && preg_match('#^storage/templates/(.+)$#', $templatePath, $matches)) {
-                    $correctedPath = 'public/storage/templates/' . $matches[1];
-                    Log::info("Trying corrected path (added public/): {$correctedPath}");
-                    
-                    if (Storage::exists($correctedPath)) {
-                        $templatePath = $correctedPath;
-                        $fileExists = true;
-                    }
-                }
-                
-                // Case 3: Try with just the basename
-                if (!$fileExists) {
-                    $basename = basename($templatePath);
-                    $possiblePaths = [
-                        'public/templates/' . $basename,
-                        'public/storage/templates/' . $basename,
-                        'storage/templates/' . $basename
-                    ];
-                    
-                    foreach ($possiblePaths as $path) {
-                        Log::info("Trying path with just basename: {$path}");
-                        if (Storage::exists($path)) {
-                            $templatePath = $path;
-                            $fileExists = true;
-                            break;
-                        }
+                        Log::info("Found template at alternative path: {$path}");
+                        break;
                     }
                 }
                 
                 if (!$fileExists) {
-                    Log::error("Template file not found after path correction attempts");
+                    Log::error("Template file not found after trying all possible paths");
                     return ReportGenerationUtils::generateEmergencyReport($report);
                 }
             }
             
-            // Get the full path to the template file
-            $templateFullPath = Storage::path($templatePath);
+            // Get the full local path to the template file
+            $templateFullPath = Storage::disk($disk)->path($templatePath);
             Log::info("Template full path: {$templateFullPath}");
+            
+            // Verify the file exists at OS level
+            if (!file_exists($templateFullPath)) {
+                Log::error("Template file not found at OS level: {$templateFullPath}");
+                return ReportGenerationUtils::generateEmergencyReport($report);
+            }
             
             // Create template processor
             $templateProcessor = new TemplateProcessor($templateFullPath);
@@ -131,12 +120,13 @@ class TemplateReportGenerator implements ReportGeneratorInterface
             $savePath = $saveDirectory . '/' . $fileName;
             
             // Ensure the reports directory exists
-            if (!ReportGenerationUtils::prepareDirectory($saveDirectory)) {
+            if (!ReportGenerationUtils::prepareDirectory($saveDirectory, $disk)) {
                 return ReportGenerationUtils::generateEmergencyReport($report);
             }
             
-            // Full path to save the document
-            $fullSavePath = storage_path('app/public/' . $savePath);
+            // Use the public disk for storing reports, consistent with our approach
+            $disk = 'public';
+            $fullSavePath = Storage::disk($disk)->path($savePath);
             
             try {
                 // Save the document
@@ -146,13 +136,13 @@ class TemplateReportGenerator implements ReportGeneratorInterface
                     throw new \Exception("Failed to create file");
                 }
                 
-                // Update report with the file path
-                if (!ReportGenerationUtils::updateReportWithFilePath($report, 'public/' . $savePath)) {
+                // Update report with the file path - store as relative to the disk
+                if (!ReportGenerationUtils::updateReportWithFilePath($report, $savePath, $disk)) {
                     throw new \Exception("Failed to update report record");
                 }
                 
-                Log::info("Template-based report generated at: public/{$savePath}");
-                return 'public/' . $savePath;
+                Log::info("Template-based report generated at: {$disk}/{$savePath}");
+                return $disk . '/' . $savePath;
             } catch (\Exception $e) {
                 Log::error("Error saving template-based document: " . $e->getMessage());
                 return ReportGenerationUtils::generateEmergencyReport($report);

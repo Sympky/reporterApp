@@ -400,7 +400,7 @@ class ReportController extends Controller
     public function download(Report $report)
     {
         try {
-            Log::info("=== Starting forceful download process for report ID: {$report->id} ===");
+            Log::info("=== Starting download process for report ID: {$report->id} ===");
             
             // First, check if file path exists in the database
             if (!$report->generated_file_path) {
@@ -410,12 +410,12 @@ class ReportController extends Controller
             
             Log::info("Report file path from database: {$report->generated_file_path}");
             
-            // Determine the disk to use (default to 'local' if no disk prefix)
+            // Parse disk and path from the stored path
             $path = $report->generated_file_path;
-            $disk = 'local';
+            $disk = 'public'; // Default disk
             
-            // Check if path starts with a disk prefix
-            if (preg_match('#^(public)/(.+)$#', $path, $matches)) {
+            // Extract disk and path if present in format "disk/path"
+            if (preg_match('#^([^/]+)/(.+)$#', $path, $matches)) {
                 $disk = $matches[1];
                 $path = $matches[2];
                 Log::info("Extracted disk: {$disk}, path: {$path}");
@@ -426,8 +426,43 @@ class ReportController extends Controller
             Log::info("File exists in {$disk} disk: " . ($fileExists ? 'Yes' : 'No'));
             
             if (!$fileExists) {
-                Log::error("Download failed: File does not exist at path: {$path} in disk: {$disk}");
-                return response()->json(['error' => 'Report file not found in storage.'], 404);
+                // Try alternative paths for backward compatibility
+                $alternativePaths = [
+                    $path,
+                    ltrim($path, '/'),
+                    'reports/' . basename($path)
+                ];
+                
+                foreach ($alternativePaths as $altPath) {
+                    Log::info("Trying alternative path: {$altPath} on disk: {$disk}");
+                    if (Storage::disk($disk)->exists($altPath)) {
+                        $path = $altPath;
+                        $fileExists = true;
+                        Log::info("Found file at alternative path: {$altPath}");
+                        break;
+                    }
+                }
+                
+                // If still not found, try a different disk
+                if (!$fileExists && $disk !== 'public') {
+                    Log::info("Trying public disk as alternative");
+                    $disk = 'public';
+                    
+                    foreach ($alternativePaths as $altPath) {
+                        Log::info("Trying alternative path: {$altPath} on disk: {$disk}");
+                        if (Storage::disk($disk)->exists($altPath)) {
+                            $path = $altPath;
+                            $fileExists = true;
+                            Log::info("Found file at alternative path on public disk: {$altPath}");
+                            break;
+                        }
+                    }
+                }
+                
+                if (!$fileExists) {
+                    Log::error("Download failed: File not found after trying all alternatives");
+                    return response()->json(['error' => 'Report file not found in storage.'], 404);
+                }
             }
             
             // Get the full path to the file
@@ -440,16 +475,27 @@ class ReportController extends Controller
                 return response()->json(['error' => 'File not found on server.'], 404);
             }
             
-            // Create a filename for the download
-            $fileName = $report->name . '.docx';
-            Log::info("Sending file as: {$fileName}");
+            // Determine file extension for proper Content-Type
+            $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
+            $contentType = 'application/octet-stream'; // Default
+            
+            if ($extension === 'docx') {
+                $contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            } elseif ($extension === 'html') {
+                $contentType = 'text/html';
+            }
+            
+            // Create a filename for the download - Use report name with appropriate extension
+            $fileName = $report->name . '.' . $extension;
+            Log::info("Sending file as: {$fileName} with content type: {$contentType}");
             
             // Serve file directly as a download attachment
             return response()->download(
                 $fullPath, 
                 $fileName, 
                 [
-                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'Content-Type' => $contentType,
+                    'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
                     'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
                     'Pragma' => 'no-cache',
                 ]

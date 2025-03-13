@@ -13,18 +13,20 @@ class ReportGenerationUtils
     /**
      * Prepare directory for saving the report.
      *
-     * @param string $saveDirectory Directory path relative to storage/app/public
+     * @param string $saveDirectory Directory path relative to storage/app/disk
+     * @param string $disk Storage disk to use
      * @return bool Whether the directory was successfully prepared
      */
-    public static function prepareDirectory(string $saveDirectory): bool
+    public static function prepareDirectory(string $saveDirectory, string $disk = 'public'): bool
     {
         try {
-            if (!Storage::disk('public')->exists($saveDirectory)) {
-                Storage::disk('public')->makeDirectory($saveDirectory);
+            if (!Storage::disk($disk)->exists($saveDirectory)) {
+                Storage::disk($disk)->makeDirectory($saveDirectory);
+                Log::info("Created directory: {$saveDirectory} on disk: {$disk}");
             }
             return true;
         } catch (\Exception $e) {
-            Log::error("Failed to create directory: {$saveDirectory}. Error: " . $e->getMessage());
+            Log::error("Failed to create directory: {$saveDirectory} on disk: {$disk}. Error: " . $e->getMessage());
             return false;
         }
     }
@@ -33,16 +35,21 @@ class ReportGenerationUtils
      * Update report record with the generated file path.
      *
      * @param Report $report The report to update
-     * @param string $filePath The path to the generated file (relative to storage/app)
+     * @param string $filePath The path to the generated file (relative to storage/app/disk)
+     * @param string $disk The storage disk name ('public', 'local', etc.)
      * @return bool Whether the update was successful
      */
-    public static function updateReportWithFilePath(Report $report, string $filePath): bool
+    public static function updateReportWithFilePath(Report $report, string $filePath, string $disk = 'public'): bool
     {
         try {
-            $report->generated_file_path = $filePath;
+            // Store the path with the disk prefix for consistency
+            $storedPath = $disk . '/' . ltrim($filePath, '/');
+            $report->generated_file_path = $storedPath;
             $report->status = 'generated';
             $report->updated_by = Auth::id();
             $report->save();
+            
+            Log::info("Updated report file path to: {$storedPath}");
             return true;
         } catch (\Exception $e) {
             Log::error("Failed to update report with file path. Error: " . $e->getMessage());
@@ -131,15 +138,16 @@ class ReportGenerationUtils
             $fileName = self::generateUniqueFilename($report, 'emergency_', 'html');
             $saveDirectory = 'reports';
             $savePath = $saveDirectory . '/' . $fileName;
+            $disk = 'public';
             
             // Prepare directory and save file
-            if (self::prepareDirectory($saveDirectory)) {
-                Storage::disk('public')->put($savePath, $content);
+            if (self::prepareDirectory($saveDirectory, $disk)) {
+                Storage::disk($disk)->put($savePath, $content);
                 
-                // Update report with file path
-                if (self::updateReportWithFilePath($report, 'public/' . $savePath)) {
-                    Log::info("Emergency HTML report generated at: public/{$savePath}");
-                    return 'public/' . $savePath;
+                // Update report with file path using disk prefix
+                if (self::updateReportWithFilePath($report, $savePath, $disk)) {
+                    Log::info("Emergency HTML report generated at: {$disk}/{$savePath}");
+                    return $disk . '/' . $savePath;
                 }
             }
             
