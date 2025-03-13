@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { useState, useRef, useEffect } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -17,8 +16,8 @@ interface Template {
 interface FormData {
   template_id: string;
   generation_method: 'from_scratch' | 'from_template';
-  generate_from_scratch: boolean; // Kept for backward compatibility
-  [key: string]: unknown; // Add index signature to satisfy Inertia's FormDataType constraint
+  generate_from_scratch: boolean;
+  [key: string]: unknown;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -32,186 +31,165 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ];
 
-export default function SelectTemplate({ templates }: { templates: Template[] }) {
-  const [ setSelectedTemplateId] = useState<number | null>(null);
-  
-  const { data, setData, post, processing, errors } = useForm<FormData>({
-    template_id: '',
-    generation_method: 'from_scratch', // Default to from_scratch
-    generate_from_scratch: true, // Kept for backward compatibility
-  });
+interface SelectTemplateProps {
+    selectedTemplateId: number | null;
+    setSelectedTemplateId: (id: number | null) => void;
+    onNext: () => void;
+}
 
-  // Update the generate_from_scratch value whenever generation_method changes
-  // This is for backward compatibility
-  useEffect(() => {
-    setData('generate_from_scratch', data.generation_method === 'from_scratch');
-  }, [data.generation_method, setData]);
+const SelectTemplate = ({
+    selectedTemplateId,
+    setSelectedTemplateId,
+    onNext,
+}: SelectTemplateProps) => {
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [templates, setTemplates] = useState<Template[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  const handleSelectTemplate = (templateId: string) => {
-    setSelectedTemplateId(parseInt(templateId));
-    setData('template_id', templateId);
-  };
+    // Function to fetch templates using Inertia
+    const fetchTemplates = async () => {
+        try {
+            setIsLoading(true);
+            // Use Inertia's router to get data (it handles CSRF and auth)
+            router.visit('/report-templates', {
+                method: 'get',
+                only: ['templates'],
+                preserveState: true,
+                onSuccess: (page) => {
+                    if (page.props.templates) {
+                        setTemplates(page.props.templates);
+                    }
+                    setIsLoading(false);
+                },
+                onError: () => {
+                    setError('Failed to load templates');
+                    setIsLoading(false);
+                }
+            });
+        } catch (err) {
+            console.error('Error fetching templates:', err);
+            setError('Failed to load templates');
+            setIsLoading(false);
+        }
+    };
 
-  const handleGenerationMethodChange = (value: 'from_scratch' | 'from_template') => {
-    setData('generation_method', value);
-    
-    // When switching to "from_scratch", clear template selection
-    if (value === 'from_scratch') {
-      setSelectedTemplateId(null);
-      setData('template_id', '');
+    // Call fetchTemplates when component mounts
+    useEffect(() => {
+        // Check if templates were already provided as props
+        if (templates && templates.length > 0) {
+            setIsLoading(false);
+            return;
+        }
+        
+        fetchTemplates();
+    }, []);
+
+    // Simple function without useRef
+    const handleSelectTemplate = (templateId: number) => {
+        setSelectedTemplateId(templateId);
+    };
+
+    const handleNext = () => {
+        if (!selectedTemplateId) {
+            setErrorMsg("Please select a template to continue.");
+            return;
+        }
+        onNext();
+    };
+
+    const handleGenerateFromScratch = () => {
+        // Use Inertia's router for navigation
+        router.visit('/reports/create/generate-from-scratch');
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center p-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+        );
     }
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('reports.select-client-project'));
-  };
+    if (error) {
+        return (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                {error}
+            </div>
+        );
+    }
 
-  // Determine if the form can be submitted
-  const canSubmit = data.generation_method === 'from_scratch' || 
-    (data.generation_method === 'from_template' && !!data.template_id);
+    return (
+        <div className="container mx-auto px-4">
+            <div className="mb-6">
+                <h4 className="text-xl font-semibold">Select a Template</h4>
+                <p className="text-gray-600">Choose a template to use for your new report.</p>
+            </div>
 
-  return (
-    <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Create Report - Select Template" />
-      <div className="container mx-auto py-6">
-        <div className="mb-6">
-          <Link href={route('reports.index')} className="flex items-center text-sm text-gray-500 hover:text-gray-700">
-            <ArrowLeftIcon className="w-4 h-4 mr-1" />
-            Back to reports
-          </Link>
-        </div>
-
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Create New Report</h1>
-          <p className="text-gray-500">Step 1 of 3: Choose how to generate your report</p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Generation Method</CardTitle>
-              <CardDescription>
-                Choose how you would like to generate your report.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup 
-                value={data.generation_method} 
-                onValueChange={(value) => handleGenerationMethodChange(value as 'from_scratch' | 'from_template')}
-                className="space-y-4"
-              >
-                <div className={`border rounded-lg p-4 transition-colors ${data.generation_method === 'from_scratch' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
-                  <div className="flex items-start">
-                    <RadioGroupItem 
-                      value="from_scratch" 
-                      id="from_scratch"
-                      className="mt-1"
-                    />
-                    <div className="ml-3">
-                      <Label 
-                        htmlFor="from_scratch"
-                        className="text-base font-medium cursor-pointer"
-                      >
-                        Generate from scratch (recommended)
-                      </Label>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Use a direct generation method that creates a clean, reliable document without template processing issues.
-                        This option is more reliable and generates a complete report with a standard format.
-                      </p>
-                    </div>
-                  </div>
+            {errorMsg && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                    {errorMsg}
+                    <span 
+                        className="absolute top-0 bottom-0 right-0 px-4 py-3"
+                        onClick={() => setErrorMsg(null)}
+                    >
+                        <span className="sr-only">Close</span>
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </span>
                 </div>
+            )}
 
-                <div className={`border rounded-lg p-4 transition-colors ${data.generation_method === 'from_template' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
-                  <div className="flex items-start">
-                    <RadioGroupItem 
-                      value="from_template" 
-                      id="from_template"
-                      className="mt-1"
-                    />
-                    <div className="ml-3">
-                      <Label 
-                        htmlFor="from_template"
-                        className="text-base font-medium cursor-pointer"
-                      >
-                        Use a template
-                      </Label>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Fill in a custom Word template with your report data. This option allows for more customized formatting
-                        but requires a properly structured template with specific placeholders.
-                      </p>
-                    </div>
-                  </div>
+            <div className="mb-6 grid grid-cols-1">
+                <Card 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={handleGenerateFromScratch}
+                >
+                    <CardContent className="flex flex-col items-center justify-center p-6">
+                        <h5 className="text-lg font-medium">Generate From Scratch</h5>
+                        <p className="text-center text-gray-600">
+                            Start with a blank report and customize as needed.
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
 
-                  {data.generation_method === 'from_template' && (
-                    <div className="mt-4 ml-8">
-                      <p className="text-sm font-medium mb-2">Select a template:</p>
-                      {templates.length === 0 ? (
-                        <div className="text-center py-4 border rounded-md">
-                          <p>No templates available. Please create a template first.</p>
-                          <div className="mt-4">
-                            <Link href={route('report-templates.create')}>
-                              <Button size="sm">Create Template</Button>
-                            </Link>
-                          </div>
-                        </div>
-                      ) : (
-                        <RadioGroup 
-                          value={data.template_id} 
-                          onValueChange={handleSelectTemplate}
-                          className="space-y-2"
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {templates && templates.length > 0 ? (
+                    templates.map((template: Template) => (
+                        <Card 
+                            key={template.id}
+                            className={`cursor-pointer hover:shadow-md transition-shadow ${
+                                selectedTemplateId === template.id ? 'border-2 border-blue-500' : ''
+                            }`}
+                            onClick={() => handleSelectTemplate(template.id)}
                         >
-                          {templates.map((template) => (
-                            <div key={template.id} className={`border rounded-md p-3 transition-colors ${data.template_id === template.id.toString() ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
-                              <div className="flex items-start">
-                                <RadioGroupItem 
-                                  value={template.id.toString()} 
-                                  id={`template-${template.id}`}
-                                  className="mt-1"
-                                />
-                                <div className="ml-3">
-                                  <Label 
-                                    htmlFor={`template-${template.id}`}
-                                    className="text-sm font-medium cursor-pointer"
-                                  >
-                                    {template.name}
-                                  </Label>
-                                  {template.description && (
-                                    <p className="text-xs text-gray-500 mt-1">{template.description}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      )}
-                      {errors.template_id && (
-                        <div className="text-red-500 text-sm mt-2">{errors.template_id}</div>
-                      )}
+                            <CardContent className="p-4">
+                                <h5 className="text-lg font-medium">{template.name}</h5>
+                                {template.description && (
+                                    <p className="text-gray-600">{template.description}</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : (
+                    <div className="col-span-full text-center p-6 bg-gray-50 rounded">
+                        <p>No templates found. You can generate a report from scratch.</p>
                     </div>
-                  )}
-                </div>
-              </RadioGroup>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Link href={route('reports.index')}>
-                <Button variant="outline" type="button">
-                  Cancel
+                )}
+            </div>
+
+            <div className="flex justify-end">
+                <Button
+                    disabled={!selectedTemplateId}
+                    onClick={handleNext}
+                >
+                    Next <ArrowRightIcon className="ml-2 h-4 w-4" />
                 </Button>
-              </Link>
-              <Button 
-                type="submit" 
-                disabled={processing || !canSubmit}
-                className="flex items-center"
-              >
-                Next Step
-                <ArrowRightIcon className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-        </form>
-      </div>
-    </AppLayout>
-  );
-} 
+            </div>
+        </div>
+    );
+};
+
+export default SelectTemplate; 

@@ -40,7 +40,7 @@ class ReportController extends Controller
             $reportsQuery = Report::with([
                     'client', 
                     'project', 
-                    'reportTemplate', 
+                    'template', 
                     'createdBy:id,name'
                 ])
                 ->orderBy('created_at', 'desc');
@@ -63,7 +63,7 @@ class ReportController extends Controller
                 }
                 
                 // Otherwise check all relationships
-                return $report->client && $report->project && $report->reportTemplate;
+                return $report->client && $report->project && $report->template;
             });
             
             Log::info('Filtered reports count: ' . $filteredReports->count());
@@ -294,7 +294,7 @@ class ReportController extends Controller
         $report->load([
             'client',
             'project',
-            'reportTemplate',
+            'template',
             'methodologies',
             'findings.files',
             'createdBy:id,name',
@@ -475,14 +475,14 @@ class ReportController extends Controller
             $report->load([
                 'client',
                 'project',
-                'reportTemplate',
+                'template',
                 'methodologies',
                 'findings.files',
                 'createdBy:id,name',
             ]);
             
             // Check if the template exists
-            if (!$report->reportTemplate) {
+            if (!$report->template) {
                 Log::error("Cannot regenerate report: Template not found for report ID: {$report->id}");
                 return redirect()->route('reports.index')
                     ->with('error', 'Cannot regenerate report: Template not found.');
@@ -549,7 +549,7 @@ class ReportController extends Controller
             $reports = Report::with([
                 'client',
                 'project',
-                'reportTemplate',
+                'template',
                 'methodologies',
                 'findings',
                 'createdBy:id,name',
@@ -596,7 +596,7 @@ class ReportController extends Controller
                             Storage::exists($report->generated_file_path) : false,
                         'has_client' => !!$report->client,
                         'has_project' => !!$report->project,
-                        'has_template' => !!$report->reportTemplate,
+                        'has_template' => !!$report->template,
                     ];
                 }),
                 'storage_config' => $diskConfig,

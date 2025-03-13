@@ -111,4 +111,12 @@ class Report extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
+    /**
+     * Get the report template that this report is based on.
+     */
+    public function reportTemplate(): BelongsTo
+    {
+        return $this->belongsTo(ReportTemplate::class, 'template_id');
+    }
 }
