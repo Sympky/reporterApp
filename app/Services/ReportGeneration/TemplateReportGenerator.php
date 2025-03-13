@@ -44,6 +44,9 @@ class TemplateReportGenerator implements ReportGeneratorInterface
             if (preg_match('#^public/(.+)$#', $templatePath, $matches)) {
                 $templatePath = $matches[1];
                 Log::info("Adjusted template path by removing 'public/' prefix: {$templatePath}");
+            } else if (preg_match('#^storage/(.+)$#', $templatePath, $matches)) {
+                $templatePath = $matches[1];
+                Log::info("Adjusted template path by removing 'storage/' prefix: {$templatePath}");
             }
             
             // Check if file exists
@@ -52,20 +55,22 @@ class TemplateReportGenerator implements ReportGeneratorInterface
             
             if (!$fileExists) {
                 // Try some alternative paths for backward compatibility
-                $possiblePaths = [
+                    $possiblePaths = [
                     $templatePath,
-                    'storage/' . $templatePath,
-                    str_replace('storage/', '', $templatePath),
-                    'templates/' . basename($templatePath)
-                ];
-                
-                foreach ($possiblePaths as $path) {
+                    'templates/' . basename($templatePath),
+                    'storage/templates/' . basename($templatePath),
+                    'storage/app/public/templates/' . basename($templatePath),
+                    'public/templates/' . basename($templatePath),
+                    'public/storage/templates/' . basename($templatePath)
+                    ];
+                    
+                    foreach ($possiblePaths as $path) {
                     Log::info("Trying alternative path: {$path}");
                     if (Storage::disk($disk)->exists($path)) {
-                        $templatePath = $path;
-                        $fileExists = true;
+                            $templatePath = $path;
+                            $fileExists = true;
                         Log::info("Found template at alternative path: {$path}");
-                        break;
+                            break;
                     }
                 }
                 
@@ -95,7 +100,7 @@ class TemplateReportGenerator implements ReportGeneratorInterface
             $methodologies = $report->methodologies->sortBy('pivot.order');
             
             // Set basic variables in the template
-            $templateProcessor->setValue('report_name', $report->name ?? '');
+            $templateProcessor->setValue('report_title', $report->name ?? '');
             $templateProcessor->setValue('client_name', $client->name ?? '');
             $templateProcessor->setValue('project_name', $project->name ?? '');
             $templateProcessor->setValue('date', date('F j, Y'));
@@ -108,24 +113,28 @@ class TemplateReportGenerator implements ReportGeneratorInterface
                 $templateProcessor->setValue('project_end_date', $project->end_date ? date('F j, Y', strtotime($project->end_date)) : '');
             }
             
-            // Process methodologies if template has the appropriate variables
-            $this->processMethodologies($templateProcessor, $methodologies);
+            // Analyze template structure to determine how to process content
+            $variables = $templateProcessor->getVariables();
+            Log::info("Template variables found: " . implode(', ', $variables));
             
-            // Process findings if template has the appropriate variables
-            $this->processFindings($templateProcessor, $findings);
+            // Process methodologies and findings using adaptive approach
+            $this->processMethodologies($templateProcessor, $methodologies, $variables);
+            $this->processFindings($templateProcessor, $findings, $variables);
             
             // Generate a unique filename
             $fileName = ReportGenerationUtils::generateUniqueFilename($report, 'template_');
             $saveDirectory = 'reports';
             $savePath = $saveDirectory . '/' . $fileName;
             
+            // Use the public disk for storing reports, consistent with our approach
+            $disk = 'public';
+            
             // Ensure the reports directory exists
             if (!ReportGenerationUtils::prepareDirectory($saveDirectory, $disk)) {
                 return ReportGenerationUtils::generateEmergencyReport($report);
             }
             
-            // Use the public disk for storing reports, consistent with our approach
-            $disk = 'public';
+            // Get the full path to save the document
             $fullSavePath = Storage::disk($disk)->path($savePath);
             
             try {
@@ -160,127 +169,458 @@ class TemplateReportGenerator implements ReportGeneratorInterface
     }
     
     /**
-     * Process methodologies dynamically for the report.
+     * Process methodologies dynamically for the report using an adaptive approach.
      *
      * @param TemplateProcessor $templateProcessor The template processor instance
      * @param \Illuminate\Database\Eloquent\Collection $methodologies The methodologies collection
+     * @param array $variables All variables found in the template
      * @return void
      */
-    private function processMethodologies(TemplateProcessor $templateProcessor, $methodologies): void
+    private function processMethodologies(TemplateProcessor $templateProcessor, $methodologies, array $variables): void
     {
-        // Check if template has methodology placeholder
         try {
-            // Basic methodology count
+            // Set basic count
             $templateProcessor->setValue('methodology_count', $methodologies->count());
             
-            // Process each methodology as a list item
-            if ($methodologies->count() > 0) {
+            // No methodologies to process
+            if ($methodologies->count() === 0) {
+                Log::info("No methodologies to process");
+                foreach (['methodology_list', 'methodology_descriptions'] as $field) {
+                    if (in_array($field, $variables)) {
+                        $templateProcessor->setValue($field, 'No methodologies provided.');
+                    }
+                }
+                return;
+            }
+            
+            // Check for block markers in the template
+            $hasBlockMethodologies = in_array('block_methodologies', $variables);
+            
+            // APPROACH 1: HANDLE TEMPLATE WITH METHODOLOGY BLOCK
+            if ($hasBlockMethodologies) {
+                Log::info("Using block cloning approach for methodologies");
+                
+                $blockReplacements = [];
+                foreach ($methodologies as $index => $methodology) {
+                    // Prepare replacement for this methodology
+                    $replacement = [
+                        'methodology_title' => $methodology->title ?? 'Untitled Methodology',
+                        'methodology_description' => $methodology->content ?? 'No description provided'
+                    ];
+
+                    // Add finding placeholders with index if needed
+                    if (in_array('finding_title', $variables) || in_array('finding_name', $variables)) {
+                        $findingField = in_array('finding_title', $variables) ? 'finding_title' : 'finding_name';
+                        $replacement[$findingField] = '${' . $findingField . '_' . $index . '}';
+                        $replacement['finding_severity'] = '${finding_severity_' . $index . '}';
+                        $replacement['finding_description'] = '${finding_description_' . $index . '}';
+                        
+                        if (in_array('finding_recommendation', $variables)) {
+                            $replacement['finding_recommendation'] = '${finding_recommendation_' . $index . '}';
+                        } elseif (in_array('finding_recommendations', $variables)) {
+                            $replacement['finding_recommendations'] = '${finding_recommendations_' . $index . '}';
+                        }
+                        
+                        if (in_array('finding_impact', $variables)) {
+                            $replacement['finding_impact'] = '${finding_impact_' . $index . '}';
+                        }
+                        
+                        if (in_array('finding_evidence', $variables)) {
+                            $replacement['finding_evidence'] = '${finding_evidence_' . $index . '}';
+                        }
+                    }
+                    
+                    $blockReplacements[] = $replacement;
+                }
+                
+                try {
+                    // Clone the block for each methodology
+                    $templateProcessor->cloneBlock(
+                        'block_methodologies', 
+                        count($blockReplacements), 
+                        true, 
+                        false, 
+                        $blockReplacements
+                    );
+                    Log::info("Successfully cloned methodology blocks: " . count($blockReplacements));
+                } catch (\Exception $e) {
+                    Log::warning("Block cloning for methodologies failed: " . $e->getMessage());
+                    Log::info("Falling back to direct value replacement");
+                    
+                    // Fallback: Concatenate all methodologies as formatted text
+                    $methodologiesText = '';
+                    foreach ($methodologies as $methodology) {
+                        $methodologiesText .= "## " . ($methodology->title ?? 'Untitled Methodology') . "\n\n";
+                        $methodologiesText .= ($methodology->content ?? 'No description provided.') . "\n\n";
+                    }
+                    
+                    // Replace the entire block with formatted text
+                    $templateProcessor->setValue('block_methodologies', $methodologiesText);
+                }
+            }
+            // APPROACH 2: HANDLE TEMPLATES WITH METHODOLOGY_TITLE/METHODOLOGY_NAME PLACEHOLDERS
+            elseif (in_array('methodology_title', $variables) || in_array('methodology_name', $variables)) {
+                $field = in_array('methodology_title', $variables) ? 'methodology_title' : 'methodology_name';
+                Log::info("Using direct replacement approach for methodologies with field: {$field}");
+                
+                // Check if we have multiple methodology placeholders (e.g., methodology_title_1, methodology_title_2)
+                $methodologyPlaceholders = array_filter($variables, function($var) use ($field) {
+                    return preg_match('/^' . preg_quote($field) . '(_\d+)?$/', $var);
+                });
+                
+                // Handle indexed placeholders (methodology_title_1, methodology_title_2, etc.)
+                if (count($methodologyPlaceholders) > 1) {
+                    Log::info("Found " . count($methodologyPlaceholders) . " methodology placeholders");
+                    
+                    // Sort the placeholders to ensure they're in order
+                    sort($methodologyPlaceholders);
+                    
+                    // Fill in each methodology with corresponding index
+                    foreach ($methodologyPlaceholders as $index => $placeholder) {
+                        $methodologyIndex = $index;
+                        $indexSuffix = '';
+                        
+                        // Extract index from placeholder if it exists
+                        if (preg_match('/_(\d+)$/', $placeholder, $matches)) {
+                            $indexSuffix = '_' . $matches[1];
+                            $methodologyIndex = (int)$matches[1] - 1; // Adjust to zero-based index
+                        }
+                        
+                        // Only set if we have data for this index
+                        if (isset($methodologies[$methodologyIndex])) {
+                            $methodology = $methodologies[$methodologyIndex];
+                            
+                            $templateProcessor->setValue($field . $indexSuffix, $methodology->title ?? 'Untitled Methodology');
+                            
+                            $descField = str_replace('title', 'description', $field);
+                            $descField = str_replace('name', 'description', $descField);
+                            
+                            if (in_array($descField . $indexSuffix, $variables)) {
+                                $templateProcessor->setValue($descField . $indexSuffix, $methodology->content ?? 'No description provided');
+                            }
+                            
+                            Log::info("Set methodology #{$methodologyIndex} values");
+                        }
+                    }
+                } 
+                // Handle single placeholder - concatenate all methodologies 
+                else {
+                    Log::info("Using single methodology placeholder approach");
+                    
+                    // Create a combined list of all methodologies
+                    $allMethodologies = '';
+                    foreach ($methodologies as $methodology) {
+                        $allMethodologies .= "## " . ($methodology->title ?? 'Untitled Methodology') . "\n\n";
+                        $allMethodologies .= ($methodology->content ?? 'No description provided.') . "\n\n";
+                    }
+                    
+                    // Replace with combined text
+                    $templateProcessor->setValue($field, 'Methodologies');
+                    
+                    $descField = str_replace('title', 'description', $field);
+                    $descField = str_replace('name', 'description', $descField);
+                    
+                    if (in_array($descField, $variables)) {
+                        $templateProcessor->setValue($descField, $allMethodologies);
+                    }
+                    
+                    Log::info("Set combined methodologies text");
+                }
+            }
+            // APPROACH 3: METHODOLOGY_LIST FALLBACK
+            elseif (in_array('methodology_list', $variables)) {
+                Log::info("Using methodology_list fallback approach");
+                
                 $methodologyNames = [];
                 $methodologyDescriptions = [];
                 
                 foreach ($methodologies as $methodology) {
-                    $methodologyNames[] = $methodology->name ?? 'Untitled Methodology';
-                    $methodologyDescriptions[] = $methodology->description ?? 'No description provided.';
+                    $methodologyNames[] = $methodology->title ?? 'Untitled Methodology';
+                    $methodologyDescriptions[] = $methodology->content ?? 'No description provided.';
                 }
                 
-                // Try to replace methodology variables in the template
-                try {
-                    $templateProcessor->cloneBlock('methodology_block', $methodologies->count(), true, true);
-                    
-                    foreach ($methodologies as $index => $methodology) {
-                        $i = $index + 1;
-                        $templateProcessor->setValue("methodology_name#{$i}", $methodology->name ?? 'Untitled Methodology');
-                        $templateProcessor->setValue("methodology_description#{$i}", $methodology->description ?? 'No description provided.');
-                    }
-                } catch (\Exception $e) {
-                    // Fallback: If block-based replacement fails, try simple list
-                    Log::info("Block-based methodology replacement failed, trying simple list: " . $e->getMessage());
-                    
-                    try {
-                        $templateProcessor->setValue('methodology_list', implode("\n", $methodologyNames));
-                        $templateProcessor->setValue('methodology_descriptions', implode("\n\n", $methodologyDescriptions));
-                    } catch (\Exception $e2) {
-                        Log::info("Simple methodology list replacement failed: " . $e2->getMessage());
-                    }
+                $templateProcessor->setValue('methodology_list', implode("\n", $methodologyNames));
+                
+                if (in_array('methodology_descriptions', $variables)) {
+                    $templateProcessor->setValue('methodology_descriptions', implode("\n\n", $methodologyDescriptions));
                 }
-            } else {
-                // If no methodologies, set empty values
-                try {
-                    $templateProcessor->setValue('methodology_list', 'No methodologies provided.');
-                    $templateProcessor->setValue('methodology_descriptions', '');
-                } catch (\Exception $e) {
-                    Log::info("Empty methodology list replacement failed: " . $e->getMessage());
-                }
+                
+                Log::info("Set methodology list with " . count($methodologyNames) . " entries");
+            }
+            else {
+                Log::info("No appropriate methodology placeholders found in template");
             }
         } catch (\Exception $e) {
-            Log::info("Methodology processing failed: " . $e->getMessage());
+            Log::error("Error processing methodologies: " . $e->getMessage());
+            Log::error($e->getTraceAsString());
         }
     }
     
     /**
-     * Process findings (vulnerabilities) dynamically for the report.
+     * Process findings dynamically for the report using an adaptive approach.
      *
      * @param TemplateProcessor $templateProcessor The template processor instance
      * @param \Illuminate\Database\Eloquent\Collection $findings The findings collection
+     * @param array $variables All variables found in the template
      * @return void
      */
-    private function processFindings(TemplateProcessor $templateProcessor, $findings): void
+    private function processFindings(TemplateProcessor $templateProcessor, $findings, array $variables): void
     {
-        // Check if template has findings placeholder
         try {
-            // Basic findings count
+            // Set basic count
             $templateProcessor->setValue('finding_count', $findings->count());
             
-            // Process each finding
-            if ($findings->count() > 0) {
-                $findingNames = [];
-                $severities = [];
-                
-                foreach ($findings as $vulnerability) {
-                    $findingNames[] = $vulnerability->name ?? 'Untitled Finding';
-                    $severities[] = $vulnerability->severity ?? 'Unspecified';
+            // No findings to process
+            if ($findings->count() === 0) {
+                Log::info("No findings to process");
+                if (in_array('finding_list', $variables)) {
+                    $templateProcessor->setValue('finding_list', 'No findings identified.');
                 }
+                return;
+            }
+            
+            // Check for block markers in the template
+            $hasBlockFindings = in_array('block_findings', $variables);
+            
+            // APPROACH 1: HANDLE TEMPLATE WITH FINDINGS BLOCK
+            if ($hasBlockFindings) {
+                Log::info("Using block cloning approach for findings");
                 
-                // Try to replace finding variables in the template using block clone
-                try {
-                    $templateProcessor->cloneBlock('finding_block', $findings->count(), true, true);
+                // Prepare replacements for the findings block
+                $findingReplacements = [];
+                foreach ($findings as $finding) {
+                    $replacement = [
+                        'finding_title' => $finding->name ?? 'Untitled Finding',
+                        'finding_severity' => $finding->severity ?? 'Unspecified',
+                        'finding_description' => $finding->description ?? 'No description provided'
+                    ];
                     
-                    foreach ($findings as $index => $vulnerability) {
-                        $i = $index + 1;
-                        $templateProcessor->setValue("finding_name#{$i}", $vulnerability->name ?? 'Untitled Finding');
-                        $templateProcessor->setValue("finding_severity#{$i}", $vulnerability->severity ?? 'Unspecified');
-                        $templateProcessor->setValue("finding_description#{$i}", $vulnerability->description ?? 'No description provided.');
-                        $templateProcessor->setValue("finding_impact#{$i}", $vulnerability->impact ?? 'Impact not specified.');
-                        $templateProcessor->setValue("finding_recommendations#{$i}", $vulnerability->recommendations ?? 'No recommendations provided.');
-                        
+                    // Add optional fields if they exist in the template
+                    if (in_array('finding_impact', $variables)) {
+                        $replacement['finding_impact'] = $finding->impact ?? 'Impact not specified';
+                    }
+                    
+                    if (in_array('finding_recommendation', $variables)) {
+                        $replacement['finding_recommendation'] = $finding->recommendations ?? 'No recommendations provided';
+                    } elseif (in_array('finding_recommendations', $variables)) {
+                        $replacement['finding_recommendations'] = $finding->recommendations ?? 'No recommendations provided';
+                    }
+                    
+                    if (in_array('finding_evidence', $variables)) {
                         // Handle evidence if available
-                        $pivotData = $vulnerability->pivot;
-                        if ($pivotData && $pivotData->include_evidence && !empty($vulnerability->evidence)) {
-                            $templateProcessor->setValue("finding_evidence#{$i}", $vulnerability->evidence);
+                        $pivotData = $finding->pivot;
+                        if ($pivotData && $pivotData->include_evidence && !empty($finding->evidence)) {
+                            $replacement['finding_evidence'] = $finding->evidence;
                         } else {
-                            $templateProcessor->setValue("finding_evidence#{$i}", 'No evidence provided.');
+                            $replacement['finding_evidence'] = 'No evidence provided.';
                         }
                     }
-                } catch (\Exception $e) {
-                    // Fallback: If block-based replacement fails, try simple list
-                    Log::info("Block-based finding replacement failed, trying simple list: " . $e->getMessage());
                     
-                    try {
-                        $templateProcessor->setValue('finding_list', implode("\n", $findingNames));
-                    } catch (\Exception $e2) {
-                        Log::info("Simple finding list replacement failed: " . $e2->getMessage());
-                    }
+                    $findingReplacements[] = $replacement;
                 }
-            } else {
-                // If no findings, set empty values
+                
                 try {
-                    $templateProcessor->setValue('finding_list', 'No findings identified.');
+                    // Clone the findings block for each finding
+                    $templateProcessor->cloneBlock(
+                        'block_findings',
+                        count($findingReplacements),
+                        true,
+                        false,
+                        $findingReplacements
+                    );
+                    Log::info("Successfully cloned findings blocks: " . count($findingReplacements));
                 } catch (\Exception $e) {
-                    Log::info("Empty finding list replacement failed: " . $e->getMessage());
+                    Log::warning("Block cloning for findings failed: " . $e->getMessage());
+                    Log::info("Falling back to direct value replacement");
+                    
+                    // Fallback: Concatenate all findings as formatted text
+                    $findingsText = "Findings:\n\n";
+                    foreach ($findings as $finding) {
+                        $findingsText .= "**" . ($finding->name ?? 'Untitled Finding') . "** (" . 
+                            ($finding->severity ?? 'Unspecified') . ")\n\n";
+                        $findingsText .= ($finding->description ?? 'No description provided.') . "\n\n";
+                        $findingsText .= "Recommendations: " . ($finding->recommendations ?? 'No recommendations provided.') . "\n\n";
+                    }
+                    
+                    // Replace the entire block with formatted text
+                    $templateProcessor->setValue('block_findings', $findingsText);
                 }
             }
+            // APPROACH 2: CHECK FOR TABLE ROW STRUCTURE
+            elseif (in_array('finding_title', $variables) || in_array('finding_name', $variables)) {
+                $field = in_array('finding_title', $variables) ? 'finding_title' : 'finding_name';
+                Log::info("Checking for table row structure with field: {$field}");
+                
+                // Try to detect if we need indexed findings by methodology
+                $methodologiesWithFindings = [];
+                
+                // Check if there are indexed findings (finding_title_0, finding_title_1, etc.)
+                $indexedFindings = false;
+                foreach ($variables as $variable) {
+                    if (preg_match('/^' . preg_quote($field) . '_(\d+)$/', $variable, $matches)) {
+                        $indexedFindings = true;
+                        $methodologiesWithFindings[$matches[1]] = true;
+                    }
+                }
+                
+                if ($indexedFindings) {
+                    Log::info("Found indexed findings structure for methodologies: " . implode(', ', array_keys($methodologiesWithFindings)));
+                    
+                    // Group findings by methodology
+                    $findingsByMethodology = [];
+                    foreach ($findings as $finding) {
+                        $pivotData = $finding->pivot;
+                        $methodologyId = $pivotData->methodology_id ?? null;
+                        
+                        if ($methodologyId) {
+                            if (!isset($findingsByMethodology[$methodologyId])) {
+                                $findingsByMethodology[$methodologyId] = [];
+                            }
+                            $findingsByMethodology[$methodologyId][] = $finding;
+                        }
+                    }
+                    
+                    // Process findings for each methodology index
+                    foreach ($methodologiesWithFindings as $methodologyIndex => $true) {
+                        $methodologyFindings = [];
+                        
+                        // If we have findings grouped by methodology id, use those
+                        // Otherwise, just assign all findings to each methodology
+                        if (!empty($findingsByMethodology)) {
+                            $methodologyIds = array_keys($findingsByMethodology);
+                            if (isset($methodologyIds[$methodologyIndex])) {
+                                $methodologyFindings = $findingsByMethodology[$methodologyIds[$methodologyIndex]];
+                            }
+                        } else {
+                            $methodologyFindings = $findings;
+                        }
+                        
+                        if (!empty($methodologyFindings)) {
+                            try {
+                                $values = [];
+                                foreach ($methodologyFindings as $finding) {
+                                    $row = [
+                                        "{$field}_{$methodologyIndex}" => $finding->name ?? 'Untitled Finding',
+                                        "finding_severity_{$methodologyIndex}" => $finding->severity ?? 'Unspecified',
+                                        "finding_description_{$methodologyIndex}" => $finding->description ?? 'No description provided'
+                                    ];
+                                    
+                                    // Add optional fields if needed
+                                    if (in_array("finding_impact_{$methodologyIndex}", $variables)) {
+                                        $row["finding_impact_{$methodologyIndex}"] = $finding->impact ?? 'Impact not specified';
+                                    }
+                                    
+                                    if (in_array("finding_recommendation_{$methodologyIndex}", $variables)) {
+                                        $row["finding_recommendation_{$methodologyIndex}"] = $finding->recommendations ?? 'No recommendations provided';
+                                    } elseif (in_array("finding_recommendations_{$methodologyIndex}", $variables)) {
+                                        $row["finding_recommendations_{$methodologyIndex}"] = $finding->recommendations ?? 'No recommendations provided';
+                                    }
+                                    
+                                    if (in_array("finding_evidence_{$methodologyIndex}", $variables)) {
+                                        $pivotData = $finding->pivot;
+                                        if ($pivotData && $pivotData->include_evidence && !empty($finding->evidence)) {
+                                            $row["finding_evidence_{$methodologyIndex}"] = $finding->evidence;
+                                        } else {
+                                            $row["finding_evidence_{$methodologyIndex}"] = 'No evidence provided.';
+                                        }
+                                    }
+                                    
+                                    $values[] = $row;
+                                }
+                                
+                                // Clone rows for this methodology's findings
+                                $templateProcessor->cloneRowAndSetValues("{$field}_{$methodologyIndex}", $values);
+                                Log::info("Cloned rows for methodology #{$methodologyIndex} findings: " . count($values));
+                            } catch (\Exception $e) {
+                                Log::warning("Row cloning for methodology #{$methodologyIndex} findings failed: " . $e->getMessage());
+                                
+                                // Alternative: concatenate findings as text
+                                $findingsText = '';
+                                foreach ($methodologyFindings as $finding) {
+                                    $findingsText .= "**" . ($finding->name ?? 'Untitled Finding') . "** (" . 
+                                        ($finding->severity ?? 'Unspecified') . ")\n\n";
+                                    $findingsText .= ($finding->description ?? 'No description provided.') . "\n\n";
+                                }
+                                
+                                $templateProcessor->setValue("{$field}_{$methodologyIndex}", $findingsText);
+                            }
+                        } else {
+                            // No findings for this methodology
+                            $templateProcessor->setValue("{$field}_{$methodologyIndex}", "No findings for this methodology.");
+                        }
+                    }
+                } else {
+                    Log::info("Using direct row cloning for all findings");
+                    
+                    try {
+                        $values = [];
+                        foreach ($findings as $finding) {
+                            $row = [
+                                $field => $finding->name ?? 'Untitled Finding',
+                                'finding_severity' => $finding->severity ?? 'Unspecified',
+                                'finding_description' => $finding->description ?? 'No description provided'
+                            ];
+                            
+                            // Add optional fields if needed
+                            if (in_array('finding_impact', $variables)) {
+                                $row['finding_impact'] = $finding->impact ?? 'Impact not specified';
+                            }
+                            
+                            if (in_array('finding_recommendation', $variables)) {
+                                $row['finding_recommendation'] = $finding->recommendations ?? 'No recommendations provided';
+                            } elseif (in_array('finding_recommendations', $variables)) {
+                                $row['finding_recommendations'] = $finding->recommendations ?? 'No recommendations provided';
+                            }
+                            
+                            if (in_array('finding_evidence', $variables)) {
+                                $pivotData = $finding->pivot;
+                                if ($pivotData && $pivotData->include_evidence && !empty($finding->evidence)) {
+                                    $row['finding_evidence'] = $finding->evidence;
+                                } else {
+                                    $row['finding_evidence'] = 'No evidence provided.';
+                                }
+                            }
+                            
+                            $values[] = $row;
+                        }
+                        
+                        // Clone rows for all findings
+                        $templateProcessor->cloneRowAndSetValues($field, $values);
+                        Log::info("Cloned rows for all findings: " . count($values));
+                    } catch (\Exception $e) {
+                        Log::warning("Row cloning for findings failed: " . $e->getMessage());
+                        
+                        // Alternative: concatenate findings as text
+                        $findingsText = '';
+                        foreach ($findings as $finding) {
+                            $findingsText .= "**" . ($finding->name ?? 'Untitled Finding') . "** (" . 
+                                ($finding->severity ?? 'Unspecified') . ")\n\n";
+                            $findingsText .= ($finding->description ?? 'No description provided.') . "\n\n";
+                        }
+                        
+                        $templateProcessor->setValue($field, $findingsText);
+                    }
+                }
+            }
+            // APPROACH 3: FINDING_LIST FALLBACK
+            elseif (in_array('finding_list', $variables)) {
+                Log::info("Using finding_list fallback approach");
+                
+                // Create a formatted list of findings
+                $findingItems = [];
+                foreach ($findings as $finding) {
+                    $findingItems[] = ($finding->name ?? 'Untitled Finding') . ' (' . ($finding->severity ?? 'Unspecified') . ')';
+                }
+                
+                $templateProcessor->setValue('finding_list', implode("\n", $findingItems));
+                Log::info("Set finding_list with " . count($findingItems) . " entries");
+            }
+            else {
+                Log::info("No appropriate finding placeholders found in template");
+            }
         } catch (\Exception $e) {
-            Log::info("Findings processing failed: " . $e->getMessage());
+            Log::error("Error processing findings: " . $e->getMessage());
+            Log::error($e->getTraceAsString());
         }
     }
 } 

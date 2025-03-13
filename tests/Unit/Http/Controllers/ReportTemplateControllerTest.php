@@ -208,11 +208,11 @@ class ReportTemplateControllerTest extends TestCase
         // Create test data
         $template = ReportTemplate::factory()->create([
             'created_by' => $this->user->id,
-            'file_path' => 'public/templates/template.docx'
+            'file_path' => 'public/storage/templates/template.docx'
         ]);
         
         // Add fake file to storage
-        Storage::disk('public')->put('templates/template.docx', 'Test file content');
+        Storage::disk('public')->put($template->file_path, 'Test file content');
         
         // Execute the controller method
         $response = $this->reportTemplateController->destroy($template);

@@ -95,8 +95,8 @@ class FromScratchReportGenerator implements ReportGeneratorInterface
                 $section->addTitle("Methodology", 1);
                 
                 foreach ($methodologies as $methodology) {
-                    $section->addTitle($methodology->name ?? 'Untitled Methodology', 2);
-                    $section->addText($methodology->description ?? 'No description provided.');
+                    $section->addTitle($methodology->title ?? 'Untitled Methodology', 2);
+                    $section->addText($methodology->content ?? 'No description provided.');
                     $section->addTextBreak(1);
                 }
                 

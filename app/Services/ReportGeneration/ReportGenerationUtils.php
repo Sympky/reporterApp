@@ -115,8 +115,8 @@ class ReportGenerationUtils
             if ($methodologies->count() > 0) {
                 $content .= "<h2>Methodology</h2>";
                 foreach ($methodologies as $methodology) {
-                    $content .= "<h3>" . htmlspecialchars($methodology->name ?? 'Untitled Methodology') . "</h3>";
-                    $content .= "<p>" . nl2br(htmlspecialchars($methodology->description ?? 'No description provided.')) . "</p>";
+                    $content .= "<h3>" . htmlspecialchars($methodology->title ?? 'Untitled Methodology') . "</h3>";
+                    $content .= "<p>" . nl2br(htmlspecialchars($methodology->content ?? 'No description provided.')) . "</p>";
                 }
             }
             
