@@ -21,10 +21,11 @@ interface Report {
     id: number;
     name: string;
   } | null;
-  reportTemplate?: {
+  report_template?: {
     id: number;
     name: string;
   } | null;
+  report_template_id?: number;
   status: string;
   generated_file_path: string | null;
   file_exists?: boolean;
@@ -49,6 +50,14 @@ export default function Index({ reports, pagination, error }: { reports: Report[
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 // Unused:   const { csrf_token } = usePage().props as any;
   
+  // Debug log to check the full structure of report objects
+  console.log('First report full data:', reports && reports.length > 0 ? reports[0] : 'No reports');
+  console.log('All reports template data:', reports?.map(r => ({
+    id: r.id,
+    report_template: r.report_template,
+    report_template_id: r.report_template_id,
+    generate_from_scratch: r.generate_from_scratch
+  })));
 
   // Ensure reports is always an array
   const safeReports = Array.isArray(reports) ? reports : [];
@@ -200,7 +209,7 @@ export default function Index({ reports, pagination, error }: { reports: Report[
                               {report.client.name}
                             </Link>
                           ) : (
-                            'Unknown client'
+                            <span className="text-gray-500 italic">Deleted Client</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -209,13 +218,15 @@ export default function Index({ reports, pagination, error }: { reports: Report[
                               {report.project.name}
                             </Link>
                           ) : (
-                            'Unknown project'
+                            <span className="text-gray-500 italic">Deleted Project</span>
                           )}
                         </TableCell>
                         <TableCell>
                           {report.generate_from_scratch 
                             ? <Badge variant="outline">Generated From Scratch</Badge>
-                            : (report.reportTemplate?.name ?? 'Unknown template')
+                            : (report.report_template 
+                                ? report.report_template.name 
+                                : <span className="text-gray-500 italic">Deleted Template</span>)
                           }
                         </TableCell>
                         <TableCell>{getStatusBadge(report.status)}</TableCell>

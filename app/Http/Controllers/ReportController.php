@@ -44,20 +44,15 @@ class ReportController extends Controller
                     'createdBy:id,name'
                 ]);
             
-            // Add filtering conditions at database level
+            // Modify filtering conditions to be more lenient
             $reportsQuery->where(function($query) {
-                // Reports generated from scratch need client and project
+                // Reports generated from scratch
                 $query->where(function($q) {
-                    $q->where('generate_from_scratch', true)
-                      ->whereNotNull('client_id')
-                      ->whereNotNull('project_id');
+                    $q->where('generate_from_scratch', true);
                 })
-                // OR reports generated from template need client, project and template
+                // OR reports generated from template (even if template was deleted)
                 ->orWhere(function($q) {
-                    $q->where('generate_from_scratch', false)
-                      ->whereNotNull('client_id')
-                      ->whereNotNull('project_id')
-                      ->whereNotNull('report_template_id');
+                    $q->where('generate_from_scratch', false);
                 });
             });
             
