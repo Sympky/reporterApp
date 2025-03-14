@@ -49,12 +49,7 @@ export default function Index({ reports, pagination, error }: { reports: Report[
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 // Unused:   const { csrf_token } = usePage().props as any;
   
-  // Debug logging
-  console.log('Reports data received:', reports);
-  console.log('Reports count:', reports?.length || 0);
-  console.log('Pagination:', pagination);
-  console.log('Error:', error);
-  
+
   // Ensure reports is always an array
   const safeReports = Array.isArray(reports) ? reports : [];
   

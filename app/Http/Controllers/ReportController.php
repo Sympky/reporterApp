@@ -36,39 +36,48 @@ class ReportController extends Controller
             
             Log::info('Starting reports index method');
             
+            // Build query with relationship loading
             $reportsQuery = Report::with([
                     'client', 
                     'project', 
                     'reportTemplate', 
                     'createdBy:id,name'
-                ])
-                ->orderBy('created_at', 'desc');
+                ]);
             
-            // Get the total count for pagination
+            // Add filtering conditions at database level
+            $reportsQuery->where(function($query) {
+                // Reports generated from scratch need client and project
+                $query->where(function($q) {
+                    $q->where('generate_from_scratch', true)
+                      ->whereNotNull('client_id')
+                      ->whereNotNull('project_id');
+                })
+                // OR reports generated from template need client, project and template
+                ->orWhere(function($q) {
+                    $q->where('generate_from_scratch', false)
+                      ->whereNotNull('client_id')
+                      ->whereNotNull('project_id')
+                      ->whereNotNull('report_template_id');
+                });
+            });
+            
+            // Order the results
+            $reportsQuery->orderBy('created_at', 'desc');
+            
+            // Get the total count AFTER filtering but BEFORE pagination
             $total = $reportsQuery->count();
             
-            // Execute the paginated query
+            Log::info('Filtered reports total count: ' . $total);
+            
+            // Execute the paginated query on the filtered dataset
             $paginatedReports = $reportsQuery->skip(($page - 1) * $perPage)
                                             ->take($perPage)
                                             ->get();
             
-            Log::info('Reports query executed. Raw count: ' . $paginatedReports->count());
+            Log::info('Paginated reports fetched: ' . $paginatedReports->count());
             
-            // Filter out reports that don't have required relationships (except for generate_from_scratch reports)
-            $filteredReports = $paginatedReports->filter(function ($report) {
-                // If generate_from_scratch is true, we don't need a template
-                if ($report->generate_from_scratch) {
-                    return $report->client && $report->project;
-                }
-                
-                // Otherwise check all relationships
-                return $report->client && $report->project && $report->reportTemplate;
-            });
-            
-            Log::info('Filtered reports count: ' . $filteredReports->count());
-            
-            // Explicitly add file existence data
-            $processedReports = $filteredReports->map(function($report) {
+            // Explicitly add file existence data (this still needs to be done in PHP)
+            $processedReports = $paginatedReports->map(function($report) {
                 // Check if the file exists but don't throw error if it doesn't
                 $fileExists = false;
                 if ($report->generated_file_path) {
@@ -98,7 +107,7 @@ class ReportController extends Controller
             Log::info('Processed reports with file existence check. Count: ' . $processedReports->count());
 
             return Inertia::render('reports/index', [
-                'reports' => $processedReports->values(),
+                'reports' => $processedReports,
                 'pagination' => [
                     'current_page' => $page,
                     'per_page' => $perPage,
